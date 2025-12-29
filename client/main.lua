@@ -71,7 +71,7 @@ AddEventHandler('onResourceStop', function(resourceName)
 end)
 
 -- Open marketplace UI
-RegisterNetEvent('ns-market:openUI', function(listings, buyOrders, inventoryItems, pickups)
+RegisterNetEvent('ns-market:openUI', function(listings, buyOrders, inventoryItems, allAvailableItems, blacklistedItems, pickups)
     if isMarketOpen then return end
 
     isMarketOpen = true
@@ -81,6 +81,8 @@ RegisterNetEvent('ns-market:openUI', function(listings, buyOrders, inventoryItem
         listings = listings,
         buyOrders = buyOrders,
         inventoryItems = inventoryItems or {},
+        allAvailableItems = allAvailableItems or {},
+        blacklistedItems = blacklistedItems or {},
         pickups = pickups or {},
         playerId = GetPlayerServerId(PlayerId())
     })

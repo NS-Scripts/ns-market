@@ -606,8 +606,42 @@ end
 
 -- Helper function to check if item is blacklisted
 local function IsItemBlacklisted(item)
+    if not item or type(item) ~= 'string' then
+        return false
+    end
+    
+    -- Normalize item name for comparison (lowercase, but keep weapon_ prefix uppercase)
+    local normalizedItem = item:lower()
+    if normalizedItem:sub(1, 7) == 'weapon_' then
+        normalizedItem = item:upper()
+    end
+    
     for _, blacklisted in ipairs(Config.BlacklistedItems) do
-        if blacklisted == item then
+        local normalizedBlacklisted = blacklisted:lower()
+        if normalizedBlacklisted:sub(1, 7) == 'weapon_' then
+            normalizedBlacklisted = blacklisted:upper()
+        end
+        
+        if normalizedItem == normalizedBlacklisted or item == blacklisted then
+            return true
+        end
+    end
+    return false
+end
+
+-- Helper function to check if item exists in ox_inventory
+local function DoesItemExist(item)
+    if not item or type(item) ~= 'string' then
+        return false
+    end
+    
+    if GetResourceState('ox_inventory') == 'started' then
+        -- Try to get the item data from ox_inventory
+        local success, itemData = pcall(function()
+            return exports.ox_inventory:Items(item)
+        end)
+        
+        if success and itemData then
             return true
         end
     end
@@ -768,6 +802,31 @@ local function GetPlayerSourceFromCitizenid(citizenid)
     return nil
 end
 
+-- Get all available items from ox_inventory (for label-to-name mapping)
+local function GetAllAvailableItems()
+    local allItems = {}
+    
+    if GetResourceState('ox_inventory') == 'started' then
+        local success, itemList = pcall(function()
+            return exports.ox_inventory:Items()
+        end)
+        
+        if success and itemList then
+            for itemName, itemData in pairs(itemList) do
+                -- Skip blacklisted items
+                if not IsItemBlacklisted(itemName) then
+                    table.insert(allItems, {
+                        name = itemName,
+                        label = itemData.label or itemName
+                    })
+                end
+            end
+        end
+    end
+    
+    return allItems
+end
+
 -- Get player inventory items for listing
 local function GetPlayerInventoryItems(source)
     if GetResourceState('ox_inventory') == 'started' then
@@ -800,11 +859,13 @@ RegisterNetEvent('ns-market:openMarket', function()
     local source = source
     -- Get player inventory items
     local inventoryItems = GetPlayerInventoryItems(source)
+    -- Get all available items for label-to-name mapping
+    local allAvailableItems = GetAllAvailableItems()
     
     -- Refresh cache before sending
     LoadListings(function(listings)
         LoadBuyOrders(function(buyOrders)
-            TriggerClientEvent('ns-market:openUI', source, listings, buyOrders, inventoryItems)
+            TriggerClientEvent('ns-market:openUI', source, listings, buyOrders, inventoryItems, allAvailableItems, Config.BlacklistedItems)
         end)
     end)
 end)
@@ -1079,6 +1140,17 @@ RegisterNetEvent('ns-market:createBuyOrder', function(item, quantity, price)
     local source = source
     
     -- Validation
+    if not item or item == '' then
+        TriggerClientEvent('ns-market:notification', source, 'error', 'Please enter an item name')
+        return
+    end
+    
+    -- Check if item exists in ox_inventory
+    if not DoesItemExist(item) then
+        TriggerClientEvent('ns-market:notification', source, 'error', 'This item does not exist in the inventory system')
+        return
+    end
+    
     if IsItemBlacklisted(item) then
         TriggerClientEvent('ns-market:notification', source, 'error', 'This item cannot be ordered on the marketplace')
         return

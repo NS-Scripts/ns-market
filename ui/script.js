@@ -3,6 +3,10 @@ let currentBuyOrders = [];
 let currentHistory = [];
 let currentPickups = [];
 let inventoryItems = [];
+let allAvailableItems = []; // All available items from ox_inventory
+let blacklistedItems = []; // Blacklisted items that cannot be used
+let itemLabelMap = {}; // Map of item name -> label
+let labelToNameMap = {}; // Map of item label -> name (for buy orders)
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -58,6 +62,21 @@ function setupEventListeners() {
     document.getElementById('orderBtn').addEventListener('click', () => {
         handleCreateBuyOrder();
     });
+    
+    // Add autocomplete suggestions for buy order item input
+    const orderItemInput = document.getElementById('orderItemName');
+    if (orderItemInput) {
+        orderItemInput.addEventListener('input', (e) => {
+            showItemSuggestions(e.target.value);
+        });
+        
+        orderItemInput.addEventListener('blur', () => {
+            // Hide suggestions after a short delay to allow clicking
+            setTimeout(() => {
+                hideItemSuggestions();
+            }, 200);
+        });
+    }
 
     // Order total calculation
     const orderQuantity = document.getElementById('orderQuantity');
@@ -211,12 +230,31 @@ function handleSellItem() {
 
 // Handle create buy order
 function handleCreateBuyOrder() {
-    const itemName = document.getElementById('orderItemName').value.trim();
+    const itemLabel = document.getElementById('orderItemName').value.trim();
     const quantity = parseInt(document.getElementById('orderQuantity').value);
     const price = parseInt(document.getElementById('orderPrice').value);
 
-    if (!itemName || !quantity || !price) {
+    if (!itemLabel || !quantity || !price) {
         showNotification('error', 'Please fill in all fields');
+        return;
+    }
+
+    // Validate that the label exists
+    if (!doesLabelExist(itemLabel)) {
+        showNotification('error', 'Item label not found. Please enter a valid item name.');
+        return;
+    }
+
+    // Convert label to item name
+    const itemName = getItemNameFromLabel(itemLabel);
+    if (!itemName) {
+        showNotification('error', 'Could not find item. Please check the item name and try again.');
+        return;
+    }
+
+    // Check if item is blacklisted
+    if (isItemBlacklisted(itemName)) {
+        showNotification('error', 'This item cannot be ordered on the marketplace');
         return;
     }
 
@@ -267,7 +305,7 @@ function renderListings(listings) {
 
     container.innerHTML = currentListings.map(listing => `
         <div class="listing-item">
-            <div class="item-name">${escapeHtml(listing.item)}</div>
+            <div class="item-name">${escapeHtml(getItemLabel(listing.item))}</div>
             <div class="item-details">
                 <div>Quantity: ${listing.quantity}</div>
                 <div>Seller: ${escapeHtml(listing.sellerName || 'Unknown')}</div>
@@ -295,7 +333,7 @@ function renderBuyOrders(orders) {
 
     container.innerHTML = currentBuyOrders.map(order => `
         <div class="order-item">
-            <div class="item-name">${escapeHtml(order.item)}</div>
+            <div class="item-name">${escapeHtml(getItemLabel(order.item))}</div>
             <div class="item-details">
                 <div>Quantity: ${order.quantity}</div>
                 <div>Buyer: ${escapeHtml(order.buyerName || 'Unknown')}</div>
@@ -331,7 +369,7 @@ function renderPickups(pickups) {
         const fulfilledDate = new Date(pickup.fulfilledTimestamp * 1000).toLocaleString();
         return `
         <div class="pickup-item">
-            <div class="item-name">${escapeHtml(pickup.item)}</div>
+            <div class="item-name">${escapeHtml(getItemLabel(pickup.item))}</div>
             <div class="item-details">
                 <div>Quantity: ${pickup.quantity}</div>
                 <div>Seller: ${escapeHtml(pickup.sellerName || 'Unknown')}</div>
@@ -367,27 +405,27 @@ function renderHistory(history) {
         switch(entry.type) {
             case 'listing':
                 typeLabel = 'Listing Created';
-                details = `Listed ${entry.quantity}x ${entry.item} for $${entry.price.toLocaleString()} each`;
+                details = `Listed ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.price.toLocaleString()} each`;
                 break;
             case 'purchase':
                 typeLabel = 'Purchase';
-                details = `${entry.buyerName} bought ${entry.quantity}x ${entry.item} from ${entry.sellerName} for $${entry.totalPrice.toLocaleString()}`;
+                details = `${entry.buyerName} bought ${entry.quantity}x ${getItemLabel(entry.item)} from ${entry.sellerName} for $${entry.totalPrice.toLocaleString()}`;
                 break;
             case 'buyOrder':
                 typeLabel = 'Buy Order Created';
-                details = `Created buy order for ${entry.quantity}x ${entry.item} at $${entry.price.toLocaleString()} each`;
+                details = `Created buy order for ${entry.quantity}x ${getItemLabel(entry.item)} at $${entry.price.toLocaleString()} each`;
                 break;
             case 'fulfill':
                 typeLabel = 'Order Fulfilled';
-                details = `${entry.sellerName} fulfilled ${entry.buyerName}'s order: ${entry.quantity}x ${entry.item} for $${entry.totalPrice.toLocaleString()}`;
+                details = `${entry.sellerName} fulfilled ${entry.buyerName}'s order: ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.totalPrice.toLocaleString()}`;
                 break;
             case 'listingCancel':
                 typeLabel = 'Listing Cancelled';
-                details = `Cancelled listing: ${entry.quantity}x ${entry.item}`;
+                details = `Cancelled listing: ${entry.quantity}x ${getItemLabel(entry.item)}`;
                 break;
             case 'buyOrderCancel':
                 typeLabel = 'Buy Order Cancelled';
-                details = `Cancelled buy order: ${entry.quantity}x ${entry.item}`;
+                details = `Cancelled buy order: ${entry.quantity}x ${getItemLabel(entry.item)}`;
                 break;
         }
         
@@ -406,7 +444,9 @@ function renderHistory(history) {
 // Filter listings
 function filterListings(searchTerm) {
     const filtered = currentListings.filter(listing => {
-        return listing.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const itemLabel = getItemLabel(listing.item).toLowerCase();
+        return itemLabel.includes(searchTerm.toLowerCase()) ||
+               listing.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
                (listing.sellerName && listing.sellerName.toLowerCase().includes(searchTerm.toLowerCase()));
     });
     
@@ -418,7 +458,7 @@ function filterListings(searchTerm) {
     
     container.innerHTML = filtered.map(listing => `
         <div class="listing-item">
-            <div class="item-name">${escapeHtml(listing.item)}</div>
+            <div class="item-name">${escapeHtml(getItemLabel(listing.item))}</div>
             <div class="item-details">
                 <div>Quantity: ${listing.quantity}</div>
                 <div>Seller: ${escapeHtml(listing.sellerName || 'Unknown')}</div>
@@ -437,7 +477,9 @@ function filterListings(searchTerm) {
 // Filter buy orders
 function filterBuyOrders(searchTerm) {
     const filtered = currentBuyOrders.filter(order => {
-        return order.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const itemLabel = getItemLabel(order.item).toLowerCase();
+        return itemLabel.includes(searchTerm.toLowerCase()) ||
+               order.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
                (order.buyerName && order.buyerName.toLowerCase().includes(searchTerm.toLowerCase()));
     });
     
@@ -449,7 +491,7 @@ function filterBuyOrders(searchTerm) {
     
     container.innerHTML = filtered.map(order => `
         <div class="order-item">
-            <div class="item-name">${escapeHtml(order.item)}</div>
+            <div class="item-name">${escapeHtml(getItemLabel(order.item))}</div>
             <div class="item-details">
                 <div>Quantity: ${order.quantity}</div>
                 <div>Buyer: ${escapeHtml(order.buyerName || 'Unknown')}</div>
@@ -470,7 +512,9 @@ function filterBuyOrders(searchTerm) {
 // Filter pickups
 function filterPickups(searchTerm) {
     const filtered = currentPickups.filter(pickup => {
-        return pickup.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const itemLabel = getItemLabel(pickup.item).toLowerCase();
+        return itemLabel.includes(searchTerm.toLowerCase()) ||
+               pickup.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
                (pickup.sellerName && pickup.sellerName.toLowerCase().includes(searchTerm.toLowerCase()));
     });
     
@@ -484,7 +528,7 @@ function filterPickups(searchTerm) {
         const fulfilledDate = new Date(pickup.fulfilledTimestamp * 1000).toLocaleString();
         return `
         <div class="pickup-item">
-            <div class="item-name">${escapeHtml(pickup.item)}</div>
+            <div class="item-name">${escapeHtml(getItemLabel(pickup.item))}</div>
             <div class="item-details">
                 <div>Quantity: ${pickup.quantity}</div>
                 <div>Seller: ${escapeHtml(pickup.sellerName || 'Unknown')}</div>
@@ -629,6 +673,192 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Get item label from item name
+function getItemLabel(itemName) {
+    if (!itemName) return 'Unknown Item';
+    
+    // Check if we have a label in our map
+    if (itemLabelMap[itemName]) {
+        return itemLabelMap[itemName];
+    }
+    
+    // Fallback: format the item name nicely (capitalize and replace underscores)
+    return itemName
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
+// Update item label map from inventory items
+function updateItemLabelMap() {
+    itemLabelMap = {};
+    inventoryItems.forEach(item => {
+        if (item.name && item.label) {
+            itemLabelMap[item.name] = item.label;
+        }
+    });
+}
+
+// Check if item is blacklisted
+function isItemBlacklisted(itemName) {
+    if (!itemName || !blacklistedItems || blacklistedItems.length === 0) {
+        return false;
+    }
+    
+    // Normalize item name for comparison
+    const normalizedItem = itemName.toLowerCase();
+    const normalizedItemUpper = itemName.toUpperCase();
+    
+    return blacklistedItems.some(blacklisted => {
+        const normalizedBlacklisted = blacklisted.toLowerCase();
+        const normalizedBlacklistedUpper = blacklisted.toUpperCase();
+        
+        // Check exact match (case-insensitive)
+        return normalizedItem === normalizedBlacklisted || 
+               normalizedItemUpper === normalizedBlacklistedUpper ||
+               itemName === blacklisted;
+    });
+}
+
+// Update label to name map from all available items
+function updateLabelToNameMap() {
+    labelToNameMap = {};
+    allAvailableItems.forEach(item => {
+        // Skip blacklisted items
+        if (item.name && item.label && !isItemBlacklisted(item.name)) {
+            // Handle case-insensitive matching and multiple items with same label
+            const labelLower = item.label.toLowerCase();
+            if (!labelToNameMap[labelLower]) {
+                labelToNameMap[labelLower] = [];
+            }
+            labelToNameMap[labelLower].push({
+                name: item.name,
+                label: item.label
+            });
+        }
+    });
+}
+
+// Get item name from label (for buy orders)
+function getItemNameFromLabel(label) {
+    if (!label) return null;
+    
+    const labelLower = label.trim().toLowerCase();
+    const matches = labelToNameMap[labelLower];
+    
+    if (matches && matches.length > 0) {
+        // If multiple items have the same label, return the first one
+        // In most cases, labels should be unique
+        return matches[0].name;
+    }
+    
+    // Try exact case-insensitive match first
+    for (const [mapLabel, items] of Object.entries(labelToNameMap)) {
+        if (mapLabel === labelLower) {
+            return items[0].name;
+        }
+    }
+    
+    // Try partial match (label contains input or input contains label)
+    for (const [mapLabel, items] of Object.entries(labelToNameMap)) {
+        if (mapLabel.includes(labelLower) || labelLower.includes(mapLabel)) {
+            return items[0].name;
+        }
+    }
+    
+    return null;
+}
+
+// Validate if label exists
+function doesLabelExist(label) {
+    if (!label) return false;
+    
+    const labelLower = label.trim().toLowerCase();
+    
+    // Check exact match
+    if (labelToNameMap[labelLower]) {
+        return true;
+    }
+    
+    // Check partial match
+    for (const mapLabel of Object.keys(labelToNameMap)) {
+        if (mapLabel === labelLower || mapLabel.includes(labelLower) || labelLower.includes(mapLabel)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Show item suggestions for autocomplete
+function showItemSuggestions(input) {
+    if (!input || input.length < 1) {
+        hideItemSuggestions();
+        return;
+    }
+    
+    const inputLower = input.toLowerCase();
+    const suggestions = [];
+    
+    // Find matching items (excluding blacklisted)
+    for (const [label, items] of Object.entries(labelToNameMap)) {
+        if (label.includes(inputLower) || inputLower.includes(label)) {
+            items.forEach(item => {
+                // Only add if not blacklisted
+                if (!isItemBlacklisted(item.name)) {
+                    suggestions.push(item.label);
+                }
+            });
+        }
+    }
+    
+    // Remove duplicates
+    const uniqueSuggestions = [...new Set(suggestions)];
+    
+    // Limit to 10 suggestions
+    const limitedSuggestions = uniqueSuggestions.slice(0, 10);
+    
+    // Remove existing suggestions container
+    const existing = document.getElementById('itemSuggestions');
+    if (existing) {
+        existing.remove();
+    }
+    
+    if (limitedSuggestions.length === 0) {
+        return;
+    }
+    
+    // Create suggestions container
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.id = 'itemSuggestions';
+    suggestionsDiv.className = 'item-suggestions';
+    
+    limitedSuggestions.forEach(suggestion => {
+        const suggestionItem = document.createElement('div');
+        suggestionItem.className = 'suggestion-item';
+        suggestionItem.textContent = suggestion;
+        suggestionItem.addEventListener('click', () => {
+            document.getElementById('orderItemName').value = suggestion;
+            hideItemSuggestions();
+        });
+        suggestionsDiv.appendChild(suggestionItem);
+    });
+    
+    // Insert after the input field
+    const orderItemInput = document.getElementById('orderItemName');
+    if (orderItemInput && orderItemInput.parentNode) {
+        orderItemInput.parentNode.insertBefore(suggestionsDiv, orderItemInput.nextSibling);
+    }
+}
+
+// Hide item suggestions
+function hideItemSuggestions() {
+    const suggestions = document.getElementById('itemSuggestions');
+    if (suggestions) {
+        suggestions.remove();
+    }
+}
+
 // Get player server ID
 let playerServerId = 0;
 function GetPlayerServerId() {
@@ -642,6 +872,9 @@ function populateInventoryDropdown() {
     
     // Clear existing options except the first one
     select.innerHTML = '<option value="">Select an item from your inventory...</option>';
+    
+    // Update item label map when inventory items change
+    updateItemLabelMap();
     
     // Add inventory items
     inventoryItems.forEach(item => {
@@ -672,6 +905,10 @@ window.addEventListener('message', function(event) {
             currentBuyOrders = data.buyOrders || [];
             currentPickups = data.pickups || [];
             inventoryItems = data.inventoryItems || [];
+            allAvailableItems = data.allAvailableItems || [];
+            blacklistedItems = data.blacklistedItems || [];
+            updateItemLabelMap(); // Update label map when opening
+            updateLabelToNameMap(); // Update label-to-name map when opening (filters blacklisted)
             if (data.playerId) {
                 playerServerId = data.playerId;
             }
@@ -688,6 +925,7 @@ window.addEventListener('message', function(event) {
             
         case 'inventoryItems':
             inventoryItems = data.inventoryItems || [];
+            updateItemLabelMap(); // Update label map when inventory changes
             populateInventoryDropdown();
             break;
             

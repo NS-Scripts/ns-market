@@ -324,6 +324,39 @@ body {
     padding: 10px;
 }
 
+/* Item suggestions autocomplete */
+.item-suggestions {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.95);
+    border: 1px solid rgba(0, 150, 255, 0.3);
+    border-radius: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    margin-top: 2px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.suggestion-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    color: #ffffff;
+    border-bottom: 1px solid rgba(0, 150, 255, 0.1);
+    transition: background 0.2s;
+}
+
+.suggestion-item:hover {
+    background: rgba(0, 150, 255, 0.2);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.form-group {
+    position: relative;
+}
+
 .price-info {
     margin: 15px 0;
     padding: 10px;
