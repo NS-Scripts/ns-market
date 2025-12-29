@@ -94,6 +94,16 @@ function setupEventListeners() {
     document.getElementById('applyHistoryFilter').addEventListener('click', () => {
         applyHistoryFilters();
     });
+    
+    // History search - real-time filtering
+    document.getElementById('historySearch').addEventListener('input', (e) => {
+        applyHistoryFilters();
+    });
+    
+    // History type filter - real-time filtering
+    document.getElementById('historyType').addEventListener('change', () => {
+        applyHistoryFilters();
+    });
 }
 
 // Switch tabs
@@ -122,6 +132,15 @@ function switchTab(tabName) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({})
+        });
+    }
+    
+    // Load history when switching to history tab
+    if (tabName === 'history') {
+        fetch('https://' + GetParentResourceName() + '/getHistory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filters: {} })
         });
     }
 }
@@ -399,33 +418,49 @@ function renderHistory(history) {
         const date = new Date(entry.timestamp * 1000);
         const dateStr = date.toLocaleString();
         
+        // Helper function to get name safely
+        const getName = (name, fallback = 'Unknown') => {
+            if (!name || name === 'undefined' || name.trim() === '') {
+                return fallback;
+            }
+            return name.trim();
+        };
+        
         let typeLabel = '';
         let details = '';
         
         switch(entry.type) {
             case 'listing':
                 typeLabel = 'Listing Created';
-                details = `Listed ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.price.toLocaleString()} each`;
+                const listingSeller = getName(entry.sellerName, 'Unknown Seller');
+                details = `${listingSeller} listed ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.price.toLocaleString()} each`;
                 break;
             case 'purchase':
                 typeLabel = 'Purchase';
-                details = `${entry.buyerName} bought ${entry.quantity}x ${getItemLabel(entry.item)} from ${entry.sellerName} for $${entry.totalPrice.toLocaleString()}`;
+                const purchaseBuyer = getName(entry.buyerName, 'Unknown Buyer');
+                const purchaseSeller = getName(entry.sellerName, 'Unknown Seller');
+                details = `${purchaseBuyer} bought ${entry.quantity}x ${getItemLabel(entry.item)} from ${purchaseSeller} for $${entry.totalPrice.toLocaleString()}`;
                 break;
             case 'buyOrder':
                 typeLabel = 'Buy Order Created';
-                details = `Created buy order for ${entry.quantity}x ${getItemLabel(entry.item)} at $${entry.price.toLocaleString()} each`;
+                const orderBuyer = getName(entry.buyerName, 'Unknown Buyer');
+                details = `${orderBuyer} created buy order for ${entry.quantity}x ${getItemLabel(entry.item)} at $${entry.price.toLocaleString()} each`;
                 break;
             case 'fulfill':
                 typeLabel = 'Order Fulfilled';
-                details = `${entry.sellerName} fulfilled ${entry.buyerName}'s order: ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.totalPrice.toLocaleString()}`;
+                const fulfillSeller = getName(entry.sellerName, 'Unknown Seller');
+                const fulfillBuyer = getName(entry.buyerName, 'Unknown Buyer');
+                details = `${fulfillSeller} fulfilled ${fulfillBuyer}'s order: ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.totalPrice.toLocaleString()}`;
                 break;
             case 'listingCancel':
                 typeLabel = 'Listing Cancelled';
-                details = `Cancelled listing: ${entry.quantity}x ${getItemLabel(entry.item)}`;
+                const cancelListingSeller = getName(entry.sellerName, 'Unknown Seller');
+                details = `${cancelListingSeller} cancelled listing: ${entry.quantity}x ${getItemLabel(entry.item)}`;
                 break;
             case 'buyOrderCancel':
                 typeLabel = 'Buy Order Cancelled';
-                details = `Cancelled buy order: ${entry.quantity}x ${getItemLabel(entry.item)}`;
+                const cancelOrderBuyer = getName(entry.buyerName, 'Unknown Buyer');
+                details = `${cancelOrderBuyer} cancelled buy order: ${entry.quantity}x ${getItemLabel(entry.item)}`;
                 break;
         }
         
@@ -615,24 +650,121 @@ function pickupOrder(pickupId) {
     });
 }
 
-// Apply history filters
+// Apply history filters (client-side filtering)
 function applyHistoryFilters() {
     const searchTerm = document.getElementById('historySearch').value.trim();
     const typeFilter = document.getElementById('historyType').value;
     
-    const filters = {};
+    // Filter history entries client-side
+    let filtered = currentHistory;
+    
+    // Filter by type if selected
     if (typeFilter) {
-        filters.type = typeFilter;
-    }
-    if (searchTerm) {
-        filters.search = searchTerm;
+        filtered = filtered.filter(entry => entry.type === typeFilter);
     }
     
-    fetch('https://' + GetParentResourceName() + '/getHistory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filters: filters })
-    });
+    // Filter by search term (item label, item name, buyer name, seller name)
+    if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        filtered = filtered.filter(entry => {
+            // Search by item label
+            const itemLabel = getItemLabel(entry.item).toLowerCase();
+            if (itemLabel.includes(searchLower)) {
+                return true;
+            }
+            
+            // Search by item name
+            if (entry.item && entry.item.toLowerCase().includes(searchLower)) {
+                return true;
+            }
+            
+            // Search by buyer name
+            if (entry.buyerName && entry.buyerName.toLowerCase().includes(searchLower)) {
+                return true;
+            }
+            
+            // Search by seller name
+            if (entry.sellerName && entry.sellerName.toLowerCase().includes(searchLower)) {
+                return true;
+            }
+            
+            return false;
+        });
+    }
+    
+    // Render filtered history
+    renderFilteredHistory(filtered);
+}
+
+// Render filtered history
+function renderFilteredHistory(history) {
+    const container = document.getElementById('historyContainer');
+    
+    if (history.length === 0) {
+        container.innerHTML = '<div class="empty-state">No history matches your search</div>';
+        return;
+    }
+
+    container.innerHTML = history.map(entry => {
+        const date = new Date(entry.timestamp * 1000);
+        const dateStr = date.toLocaleString();
+        
+        // Helper function to get name safely
+        const getName = (name, fallback = 'Unknown') => {
+            if (!name || name === 'undefined' || name.trim() === '') {
+                return fallback;
+            }
+            return name.trim();
+        };
+        
+        let typeLabel = '';
+        let details = '';
+        
+        switch(entry.type) {
+            case 'listing':
+                typeLabel = 'Listing Created';
+                const listingSeller = getName(entry.sellerName, 'Unknown Seller');
+                details = `${listingSeller} listed ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.price.toLocaleString()} each`;
+                break;
+            case 'purchase':
+                typeLabel = 'Purchase';
+                const purchaseBuyer = getName(entry.buyerName, 'Unknown Buyer');
+                const purchaseSeller = getName(entry.sellerName, 'Unknown Seller');
+                details = `${purchaseBuyer} bought ${entry.quantity}x ${getItemLabel(entry.item)} from ${purchaseSeller} for $${entry.totalPrice.toLocaleString()}`;
+                break;
+            case 'buyOrder':
+                typeLabel = 'Buy Order Created';
+                const orderBuyer = getName(entry.buyerName, 'Unknown Buyer');
+                details = `${orderBuyer} created buy order for ${entry.quantity}x ${getItemLabel(entry.item)} at $${entry.price.toLocaleString()} each`;
+                break;
+            case 'fulfill':
+                typeLabel = 'Order Fulfilled';
+                const fulfillSeller = getName(entry.sellerName, 'Unknown Seller');
+                const fulfillBuyer = getName(entry.buyerName, 'Unknown Buyer');
+                details = `${fulfillSeller} fulfilled ${fulfillBuyer}'s order: ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.totalPrice.toLocaleString()}`;
+                break;
+            case 'listingCancel':
+                typeLabel = 'Listing Cancelled';
+                const cancelListingSeller = getName(entry.sellerName, 'Unknown Seller');
+                details = `${cancelListingSeller} cancelled listing: ${entry.quantity}x ${getItemLabel(entry.item)}`;
+                break;
+            case 'buyOrderCancel':
+                typeLabel = 'Buy Order Cancelled';
+                const cancelOrderBuyer = getName(entry.buyerName, 'Unknown Buyer');
+                details = `${cancelOrderBuyer} cancelled buy order: ${entry.quantity}x ${getItemLabel(entry.item)}`;
+                break;
+        }
+        
+        return `
+            <div class="history-item">
+                <div class="item-name">${typeLabel}</div>
+                <div class="item-details">
+                    <div>${details}</div>
+                    <div style="margin-top: 10px; color: #888; font-size: 12px;">${dateStr}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // Show notification
@@ -971,6 +1103,12 @@ window.addEventListener('message', function(event) {
             
         case 'history':
             renderHistory(data.history);
+            // Re-apply filters if any are active
+            const historySearch = document.getElementById('historySearch');
+            const historyType = document.getElementById('historyType');
+            if ((historySearch && historySearch.value.trim()) || (historyType && historyType.value)) {
+                applyHistoryFilters();
+            }
             break;
             
         case 'notification':

@@ -537,15 +537,51 @@ local function GetHistory(filters, callback)
         if result then
             local history = {}
             for _, row in ipairs(result) do
+                -- Build seller name from firstname and lastname
+                local sellerName = ''
+                if row.seller_firstname and row.seller_lastname then
+                    sellerName = (row.seller_firstname or '') .. ' ' .. (row.seller_lastname or '')
+                elseif row.seller_firstname then
+                    sellerName = row.seller_firstname
+                elseif row.seller_lastname then
+                    sellerName = row.seller_lastname
+                end
+                -- Trim whitespace
+                sellerName = string.gsub(sellerName, '^%s+', '')
+                sellerName = string.gsub(sellerName, '%s+$', '')
+                if sellerName == '' then
+                    sellerName = 'Unknown'
+                end
+                
+                -- Build buyer name from firstname and lastname
+                local buyerName = ''
+                if row.buyer_firstname and row.buyer_lastname then
+                    buyerName = (row.buyer_firstname or '') .. ' ' .. (row.buyer_lastname or '')
+                elseif row.buyer_firstname then
+                    buyerName = row.buyer_firstname
+                elseif row.buyer_lastname then
+                    buyerName = row.buyer_lastname
+                end
+                -- Trim whitespace
+                buyerName = string.gsub(buyerName, '^%s+', '')
+                buyerName = string.gsub(buyerName, '%s+$', '')
+                if buyerName == '' then
+                    buyerName = 'Unknown'
+                end
+                
                 local entry = {
                     id = row.id,
                     type = row.type,
                     listingId = row.listing_id,
                     orderId = row.order_id,
-                    seller = row.seller,
-                    sellerName = row.seller_name,
-                    buyer = row.buyer,
-                    buyerName = row.buyer_name,
+                    sellerCitizenid = row.seller_citizenid,
+                    sellerFirstname = row.seller_firstname or '',
+                    sellerLastname = row.seller_lastname or '',
+                    sellerName = sellerName,
+                    buyerCitizenid = row.buyer_citizenid,
+                    buyerFirstname = row.buyer_firstname or '',
+                    buyerLastname = row.buyer_lastname or '',
+                    buyerName = buyerName,
                     item = row.item,
                     quantity = row.quantity,
                     price = row.price,
