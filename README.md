@@ -32,4 +32,9 @@ A comprehensive marketplace system for FiveM servers that allows players to buy 
 3. Logo can be swapped out with same name 60x70px
 4. Large list of backlisted items already in configuration, but can add more.
 
+## Support
+
+For support, questions, or bug reports, please join our Discord server:
+
+[Discord Support Server](https://discord.gg/xSCBAYFwmY)
 
