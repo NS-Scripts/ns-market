@@ -11,12 +11,12 @@ A comprehensive marketplace system for FiveM servers that allows players to buy 
 - **Multiple Locations**: Support for multiple marketplace locations with PED interactions
 - **Transaction History**: Complete history of all marketplace activity with filtering
 
-Dependencies:
+## Dependencies
 
 1. qbox, (qbcore and esx not tested)
 2. ox_inventory, (qb-inventory and es_inventory not tested)
 
-Usage
+## Usage
 
 1. **Accessing the Marketplace**: Approach any configured marketplace and interact with ped.
 2. **Listing Items**: Go to the "Sell Item" tab, enter item name, quantity, and price, then click "List Item"
@@ -25,7 +25,7 @@ Usage
 5. **Fulfilling Orders**: View buy orders and click "Fulfill" to sell items to buyers
 6. **Viewing History**: Check the "History" tab to see all marketplace activity
 
-### Installation
+## Installation
 
 1. Ensure ns-market or add to folders included in server.cfg e.g. '[standalone]'
 2. Run the SQL script located in `sql/marketplace.sql` to create the tables:
