@@ -457,19 +457,6 @@ end
 
 -- Add history entry
 local function AddHistory(entry, callback)
-    -- Clean old history entries if over limit
-    if Config.Settings.maxHistoryEntries > 0 then
-        MySQLQuery([[
-            DELETE FROM ns_marketplace_history 
-            WHERE id NOT IN (
-                SELECT id FROM (
-                    SELECT id FROM ns_marketplace_history 
-                    ORDER BY timestamp DESC 
-                    LIMIT ?
-                ) AS temp
-            )
-        ]], {Config.Settings.maxHistoryEntries}, function() end)
-    end
     
     local query = [[
         INSERT INTO ns_marketplace_history 

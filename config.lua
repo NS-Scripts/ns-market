@@ -229,7 +229,6 @@ Config.Settings = {
     maxPrice = 1000000,                -- Maximum price for items
     transactionFeePercent = 2.5,      -- Transaction fee percentage (2.5%)
     refreshInterval = 5000,            -- UI refresh interval in ms (5 seconds)
-    maxHistoryEntries = 1000,          -- Maximum history entries to keep
     enableAnalytics = true            -- Enable analytics tracking
 }
 
