@@ -177,14 +177,15 @@ body {
     box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
 }
 
-/* Listings/Orders Container */
+/* Listings, Orders, and Pickups Container - consolidated */
 .listings-container,
-.orders-container {
+.orders-container,
+.pickups-container {
     display: flex;
     flex-direction: column;
     gap: 0;
     overflow-y: auto;
-    max-height: calc(85vh - 250px);
+    max-height: calc(85vh - 200px);
 }
 
 /* History Container - no overflow, parent handles scrolling */
@@ -278,16 +279,6 @@ body {
     text-align: left;
 }
 
-/* Listings, Orders, and Pickups - Row-based compact view */
-.listings-container,
-.orders-container,
-.pickups-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    overflow-y: auto;
-    max-height: calc(85vh - 200px);
-}
 
 .marketplace-table {
     width: 100%;
@@ -413,8 +404,17 @@ body {
 }
 
 /* Row cell alignment for date column */
-.marketplace-table-row .row-date,
+.marketplace-table-row .row-date {
+    color: #888888;
+    font-size: 14px;
+    white-space: nowrap;
+    text-align: left;
+}
+
 .history-table-row .history-date {
+    color: #888888;
+    font-size: 14px;
+    white-space: nowrap;
     text-align: left;
 }
 

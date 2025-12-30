@@ -432,7 +432,7 @@ function renderPickups(pickups) {
                 <td class="row-player">${escapeHtml(pickup.sellerName || 'Unknown')}</td>
                 <td class="row-price">$${pickup.price.toLocaleString()}</td>
                 <td class="row-total">$${pickup.totalPrice.toLocaleString()}</td>
-                <td class="row-date" style="font-size: 11px; color: #888;">${dateStr}</td>
+                <td class="row-date">${dateStr}</td>
                 <td class="row-actions">
                     <button class="action-btn success" onclick="pickupOrder(${pickup.id})">Pick Up</button>
                 </td>
@@ -698,7 +698,7 @@ function filterPickups(searchTerm) {
                 <td class="row-player">${escapeHtml(pickup.sellerName || 'Unknown')}</td>
                 <td class="row-price">$${pickup.price.toLocaleString()}</td>
                 <td class="row-total">$${pickup.totalPrice.toLocaleString()}</td>
-                <td class="row-date" style="font-size: 11px; color: #888;">${dateStr}</td>
+                <td class="row-date">${dateStr}</td>
                 <td class="row-actions">
                     <button class="action-btn success" onclick="pickupOrder(${pickup.id})">Pick Up</button>
                 </td>
