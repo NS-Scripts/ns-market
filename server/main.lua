@@ -1607,12 +1607,9 @@ end)
 -- Initialize database on resource start
 CreateThread(function()
     Wait(1000) -- Wait for MySQL to be ready
-    print("^2[NS Market]^7 Loading database from MySQL...")
     LoadListings(function()
-        print("^2[NS Market]^7 Loaded " .. #cache.listings .. " listings")
     end)
     LoadBuyOrders(function()
-        print("^2[NS Market]^7 Loaded " .. #cache.buyOrders .. " buy orders")
     end)
 end)
 

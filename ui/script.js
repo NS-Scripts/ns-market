@@ -322,22 +322,41 @@ function renderListings(listings) {
         return;
     }
 
-    container.innerHTML = currentListings.map(listing => `
-        <div class="listing-item">
-            <div class="item-name">${escapeHtml(getItemLabel(listing.item))}</div>
-            <div class="item-details">
-                <div>Quantity: ${listing.quantity}</div>
-                <div>Seller: ${escapeHtml(listing.sellerName || 'Unknown')}</div>
-                <div>Price per item: $${listing.price.toLocaleString()}</div>
-            </div>
-            <div class="item-price">Total: $${(listing.price * listing.quantity).toLocaleString()}</div>
-            <div class="item-actions">
-                <input type="number" class="quantity-input" id="qty-${listing.id}" min="1" max="${listing.quantity}" value="1">
-                <button class="action-btn success" onclick="purchaseItem(${listing.id})">Buy</button>
-                ${listing.seller === GetPlayerServerId() ? `<button class="action-btn danger" onclick="cancelListing(${listing.id})">Cancel</button>` : ''}
-            </div>
-        </div>
-    `).join('');
+    const tableRows = currentListings.map(listing => {
+        const totalPrice = listing.price * listing.quantity;
+        return `
+            <tr class="marketplace-table-row">
+                <td class="row-item-name">${escapeHtml(getItemLabel(listing.item))}</td>
+                <td class="row-quantity">${listing.quantity}</td>
+                <td class="row-player">${escapeHtml(listing.sellerName || 'Unknown')}</td>
+                <td class="row-price">$${listing.price.toLocaleString()}</td>
+                <td class="row-total">$${totalPrice.toLocaleString()}</td>
+                <td class="row-actions">
+                    <input type="number" class="quantity-input" id="qty-${listing.id}" min="1" max="${listing.quantity}" value="1">
+                    <button class="action-btn success" onclick="purchaseItem(${listing.id})">Buy</button>
+                    ${listing.seller === GetPlayerServerId() ? `<button class="action-btn danger" onclick="cancelListing(${listing.id})">Cancel</button>` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    container.innerHTML = `
+        <table class="marketplace-table">
+            <thead class="marketplace-table-header">
+                <tr>
+                    <th class="col-item">Item</th>
+                    <th class="col-quantity">Qty</th>
+                    <th class="col-player">Seller</th>
+                    <th class="col-price">Price</th>
+                    <th class="col-total">Total</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
 }
 
 // Render buy orders
@@ -350,24 +369,43 @@ function renderBuyOrders(orders) {
         return;
     }
 
-    container.innerHTML = currentBuyOrders.map(order => `
-        <div class="order-item">
-            <div class="item-name">${escapeHtml(getItemLabel(order.item))}</div>
-            <div class="item-details">
-                <div>Quantity: ${order.quantity}</div>
-                <div>Buyer: ${escapeHtml(order.buyerName || 'Unknown')}</div>
-                <div>Price per item: $${order.price.toLocaleString()}</div>
-            </div>
-            <div class="item-price">Total: $${(order.price * order.quantity).toLocaleString()}</div>
-            <div class="item-actions">
-                <input type="number" class="quantity-input" id="qty-order-${order.id}" min="1" max="${order.quantity}" value="1">
-                ${order.buyer === GetPlayerServerId() ? 
-                    `<button class="action-btn danger" onclick="cancelBuyOrder(${order.id})">Cancel</button>` : 
-                    `<button class="action-btn success" onclick="fulfillBuyOrder(${order.id})">Fulfill</button>`
-                }
-            </div>
-        </div>
-    `).join('');
+    const tableRows = currentBuyOrders.map(order => {
+        const totalPrice = order.price * order.quantity;
+        return `
+            <tr class="marketplace-table-row">
+                <td class="row-item-name">${escapeHtml(getItemLabel(order.item))}</td>
+                <td class="row-quantity">${order.quantity}</td>
+                <td class="row-player">${escapeHtml(order.buyerName || 'Unknown')}</td>
+                <td class="row-price">$${order.price.toLocaleString()}</td>
+                <td class="row-total">$${totalPrice.toLocaleString()}</td>
+                <td class="row-actions">
+                    <input type="number" class="quantity-input" id="qty-order-${order.id}" min="1" max="${order.quantity}" value="1">
+                    ${order.buyer === GetPlayerServerId() ? 
+                        `<button class="action-btn danger" onclick="cancelBuyOrder(${order.id})">Cancel</button>` : 
+                        `<button class="action-btn success" onclick="fulfillBuyOrder(${order.id})">Fulfill</button>`
+                    }
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    container.innerHTML = `
+        <table class="marketplace-table">
+            <thead class="marketplace-table-header">
+                <tr>
+                    <th class="col-item">Item</th>
+                    <th class="col-quantity">Qty</th>
+                    <th class="col-player">Buyer</th>
+                    <th class="col-price">Price</th>
+                    <th class="col-total">Total</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
 }
 
 // Render pickups
@@ -384,24 +422,42 @@ function renderPickups(pickups) {
         return;
     }
 
-    container.innerHTML = currentPickups.map(pickup => {
-        const fulfilledDate = new Date(pickup.fulfilledTimestamp * 1000).toLocaleString();
+    const tableRows = currentPickups.map(pickup => {
+        const fulfilledDate = new Date(pickup.fulfilledTimestamp * 1000);
+        const dateStr = fulfilledDate.toLocaleDateString() + ' ' + fulfilledDate.toLocaleTimeString();
         return `
-        <div class="pickup-item">
-            <div class="item-name">${escapeHtml(getItemLabel(pickup.item))}</div>
-            <div class="item-details">
-                <div>Quantity: ${pickup.quantity}</div>
-                <div>Seller: ${escapeHtml(pickup.sellerName || 'Unknown')}</div>
-                <div>Price per item: $${pickup.price.toLocaleString()}</div>
-                <div>Fulfilled: ${fulfilledDate}</div>
-            </div>
-            <div class="item-price">Total: $${pickup.totalPrice.toLocaleString()}</div>
-            <div class="item-actions">
-                <button class="action-btn success" onclick="pickupOrder(${pickup.id})">Pick Up</button>
-            </div>
-        </div>
-    `;
+            <tr class="marketplace-table-row">
+                <td class="row-item-name">${escapeHtml(getItemLabel(pickup.item))}</td>
+                <td class="row-quantity">${pickup.quantity}</td>
+                <td class="row-player">${escapeHtml(pickup.sellerName || 'Unknown')}</td>
+                <td class="row-price">$${pickup.price.toLocaleString()}</td>
+                <td class="row-total">$${pickup.totalPrice.toLocaleString()}</td>
+                <td class="row-date" style="font-size: 11px; color: #888;">${dateStr}</td>
+                <td class="row-actions">
+                    <button class="action-btn success" onclick="pickupOrder(${pickup.id})">Pick Up</button>
+                </td>
+            </tr>
+        `;
     }).join('');
+    
+    container.innerHTML = `
+        <table class="marketplace-table">
+            <thead class="marketplace-table-header">
+                <tr>
+                    <th class="col-item">Item</th>
+                    <th class="col-quantity">Qty</th>
+                    <th class="col-player">Seller</th>
+                    <th class="col-price">Price</th>
+                    <th class="col-total">Total</th>
+                    <th class="col-date">Fulfilled</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
 }
 
 // Render history
@@ -414,66 +470,101 @@ function renderHistory(history) {
         return;
     }
 
-    container.innerHTML = currentHistory.map(entry => {
+    // Helper function to get name safely
+    const getName = (name, fallback = 'Unknown') => {
+        if (!name || name === 'undefined' || name.trim() === '') {
+            return fallback;
+        }
+        return name.trim();
+    };
+    
+    if (currentHistory.length === 0) {
+        container.innerHTML = '<div class="empty-state">No history available</div>';
+        return;
+    }
+    
+    const tableRows = currentHistory.map(entry => {
         const date = new Date(entry.timestamp * 1000);
-        const dateStr = date.toLocaleString();
-        
-        // Helper function to get name safely
-        const getName = (name, fallback = 'Unknown') => {
-            if (!name || name === 'undefined' || name.trim() === '') {
-                return fallback;
-            }
-            return name.trim();
-        };
+        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
         
         let typeLabel = '';
-        let details = '';
+        let sellerName = '';
+        let buyerName = '';
+        let itemLabel = getItemLabel(entry.item);
+        let quantity = entry.quantity || 0;
+        let price = entry.price || 0;
+        let totalPrice = entry.totalPrice || 0;
         
         switch(entry.type) {
             case 'listing':
                 typeLabel = 'Listing Created';
-                const listingSeller = getName(entry.sellerName, 'Unknown Seller');
-                details = `${listingSeller} listed ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.price.toLocaleString()} each`;
+                sellerName = getName(entry.sellerName, 'Unknown');
+                buyerName = '-';
+                totalPrice = price * quantity;
                 break;
             case 'purchase':
                 typeLabel = 'Purchase';
-                const purchaseBuyer = getName(entry.buyerName, 'Unknown Buyer');
-                const purchaseSeller = getName(entry.sellerName, 'Unknown Seller');
-                details = `${purchaseBuyer} bought ${entry.quantity}x ${getItemLabel(entry.item)} from ${purchaseSeller} for $${entry.totalPrice.toLocaleString()}`;
+                sellerName = getName(entry.sellerName, 'Unknown');
+                buyerName = getName(entry.buyerName, 'Unknown');
                 break;
             case 'buyOrder':
                 typeLabel = 'Buy Order Created';
-                const orderBuyer = getName(entry.buyerName, 'Unknown Buyer');
-                details = `${orderBuyer} created buy order for ${entry.quantity}x ${getItemLabel(entry.item)} at $${entry.price.toLocaleString()} each`;
+                sellerName = '-';
+                buyerName = getName(entry.buyerName, 'Unknown');
+                totalPrice = price * quantity;
                 break;
             case 'fulfill':
                 typeLabel = 'Order Fulfilled';
-                const fulfillSeller = getName(entry.sellerName, 'Unknown Seller');
-                const fulfillBuyer = getName(entry.buyerName, 'Unknown Buyer');
-                details = `${fulfillSeller} fulfilled ${fulfillBuyer}'s order: ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.totalPrice.toLocaleString()}`;
+                sellerName = getName(entry.sellerName, 'Unknown');
+                buyerName = getName(entry.buyerName, 'Unknown');
                 break;
             case 'listingCancel':
                 typeLabel = 'Listing Cancelled';
-                const cancelListingSeller = getName(entry.sellerName, 'Unknown Seller');
-                details = `${cancelListingSeller} cancelled listing: ${entry.quantity}x ${getItemLabel(entry.item)}`;
+                sellerName = getName(entry.sellerName, 'Unknown');
+                buyerName = '-';
+                totalPrice = 0;
                 break;
             case 'buyOrderCancel':
                 typeLabel = 'Buy Order Cancelled';
-                const cancelOrderBuyer = getName(entry.buyerName, 'Unknown Buyer');
-                details = `${cancelOrderBuyer} cancelled buy order: ${entry.quantity}x ${getItemLabel(entry.item)}`;
+                sellerName = '-';
+                buyerName = getName(entry.buyerName, 'Unknown');
+                totalPrice = 0;
                 break;
         }
         
         return `
-            <div class="history-item">
-                <div class="item-name">${typeLabel}</div>
-                <div class="item-details">
-                    <div>${details}</div>
-                    <div style="margin-top: 10px; color: #888; font-size: 12px;">${dateStr}</div>
-                </div>
-            </div>
+            <tr class="history-table-row">
+                <td class="history-type">${escapeHtml(typeLabel)}</td>
+                <td class="history-item-name">${escapeHtml(itemLabel)}</td>
+                <td class="history-quantity">${quantity}</td>
+                <td class="history-player">${escapeHtml(sellerName)}</td>
+                <td class="history-player">${escapeHtml(buyerName)}</td>
+                <td class="history-unit-price">${price > 0 ? '$' + price.toLocaleString() : '-'}</td>
+                <td class="history-price">${totalPrice > 0 ? '$' + totalPrice.toLocaleString() : '-'}</td>
+                <td class="history-date">${dateStr}</td>
+            </tr>
         `;
     }).join('');
+    
+    container.innerHTML = `
+        <table class="history-table">
+            <thead class="history-table-header">
+                <tr>
+                    <th class="col-type">Type</th>
+                    <th class="col-item">Item</th>
+                    <th class="col-quantity">Qty</th>
+                    <th class="col-player">Seller</th>
+                    <th class="col-player">Buyer</th>
+                    <th class="col-price">Price</th>
+                    <th class="col-total">Total</th>
+                    <th class="col-date">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
 }
 
 // Filter listings
@@ -491,22 +582,41 @@ function filterListings(searchTerm) {
         return;
     }
     
-    container.innerHTML = filtered.map(listing => `
-        <div class="listing-item">
-            <div class="item-name">${escapeHtml(getItemLabel(listing.item))}</div>
-            <div class="item-details">
-                <div>Quantity: ${listing.quantity}</div>
-                <div>Seller: ${escapeHtml(listing.sellerName || 'Unknown')}</div>
-                <div>Price per item: $${listing.price.toLocaleString()}</div>
-            </div>
-            <div class="item-price">Total: $${(listing.price * listing.quantity).toLocaleString()}</div>
-            <div class="item-actions">
-                <input type="number" class="quantity-input" id="qty-${listing.id}" min="1" max="${listing.quantity}" value="1">
-                <button class="action-btn success" onclick="purchaseItem(${listing.id})">Buy</button>
-                ${listing.seller === GetPlayerServerId() ? `<button class="action-btn danger" onclick="cancelListing(${listing.id})">Cancel</button>` : ''}
-            </div>
-        </div>
-    `).join('');
+    const tableRows = filtered.map(listing => {
+        const totalPrice = listing.price * listing.quantity;
+        return `
+            <tr class="marketplace-table-row">
+                <td class="row-item-name">${escapeHtml(getItemLabel(listing.item))}</td>
+                <td class="row-quantity">${listing.quantity}</td>
+                <td class="row-player">${escapeHtml(listing.sellerName || 'Unknown')}</td>
+                <td class="row-price">$${listing.price.toLocaleString()}</td>
+                <td class="row-total">$${totalPrice.toLocaleString()}</td>
+                <td class="row-actions">
+                    <input type="number" class="quantity-input" id="qty-${listing.id}" min="1" max="${listing.quantity}" value="1">
+                    <button class="action-btn success" onclick="purchaseItem(${listing.id})">Buy</button>
+                    ${listing.seller === GetPlayerServerId() ? `<button class="action-btn danger" onclick="cancelListing(${listing.id})">Cancel</button>` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    container.innerHTML = `
+        <table class="marketplace-table">
+            <thead class="marketplace-table-header">
+                <tr>
+                    <th class="col-item">Item</th>
+                    <th class="col-quantity">Qty</th>
+                    <th class="col-player">Seller</th>
+                    <th class="col-price">Price</th>
+                    <th class="col-total">Total</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
 }
 
 // Filter buy orders
@@ -524,24 +634,43 @@ function filterBuyOrders(searchTerm) {
         return;
     }
     
-    container.innerHTML = filtered.map(order => `
-        <div class="order-item">
-            <div class="item-name">${escapeHtml(getItemLabel(order.item))}</div>
-            <div class="item-details">
-                <div>Quantity: ${order.quantity}</div>
-                <div>Buyer: ${escapeHtml(order.buyerName || 'Unknown')}</div>
-                <div>Price per item: $${order.price.toLocaleString()}</div>
-            </div>
-            <div class="item-price">Total: $${(order.price * order.quantity).toLocaleString()}</div>
-            <div class="item-actions">
-                <input type="number" class="quantity-input" id="qty-order-${order.id}" min="1" max="${order.quantity}" value="1">
-                ${order.buyer === GetPlayerServerId() ? 
-                    `<button class="action-btn danger" onclick="cancelBuyOrder(${order.id})">Cancel</button>` : 
-                    `<button class="action-btn success" onclick="fulfillBuyOrder(${order.id})">Fulfill</button>`
-                }
-            </div>
-        </div>
-    `).join('');
+    const tableRows = filtered.map(order => {
+        const totalPrice = order.price * order.quantity;
+        return `
+            <tr class="marketplace-table-row">
+                <td class="row-item-name">${escapeHtml(getItemLabel(order.item))}</td>
+                <td class="row-quantity">${order.quantity}</td>
+                <td class="row-player">${escapeHtml(order.buyerName || 'Unknown')}</td>
+                <td class="row-price">$${order.price.toLocaleString()}</td>
+                <td class="row-total">$${totalPrice.toLocaleString()}</td>
+                <td class="row-actions">
+                    <input type="number" class="quantity-input" id="qty-order-${order.id}" min="1" max="${order.quantity}" value="1">
+                    ${order.buyer === GetPlayerServerId() ? 
+                        `<button class="action-btn danger" onclick="cancelBuyOrder(${order.id})">Cancel</button>` : 
+                        `<button class="action-btn success" onclick="fulfillBuyOrder(${order.id})">Fulfill</button>`
+                    }
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    container.innerHTML = `
+        <table class="marketplace-table">
+            <thead class="marketplace-table-header">
+                <tr>
+                    <th class="col-item">Item</th>
+                    <th class="col-quantity">Qty</th>
+                    <th class="col-player">Buyer</th>
+                    <th class="col-price">Price</th>
+                    <th class="col-total">Total</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
 }
 
 // Filter pickups
@@ -559,24 +688,42 @@ function filterPickups(searchTerm) {
         return;
     }
     
-    container.innerHTML = filtered.map(pickup => {
-        const fulfilledDate = new Date(pickup.fulfilledTimestamp * 1000).toLocaleString();
+    const tableRows = filtered.map(pickup => {
+        const fulfilledDate = new Date(pickup.fulfilledTimestamp * 1000);
+        const dateStr = fulfilledDate.toLocaleDateString() + ' ' + fulfilledDate.toLocaleTimeString();
         return `
-        <div class="pickup-item">
-            <div class="item-name">${escapeHtml(getItemLabel(pickup.item))}</div>
-            <div class="item-details">
-                <div>Quantity: ${pickup.quantity}</div>
-                <div>Seller: ${escapeHtml(pickup.sellerName || 'Unknown')}</div>
-                <div>Price per item: $${pickup.price.toLocaleString()}</div>
-                <div>Fulfilled: ${fulfilledDate}</div>
-            </div>
-            <div class="item-price">Total: $${pickup.totalPrice.toLocaleString()}</div>
-            <div class="item-actions">
-                <button class="action-btn success" onclick="pickupOrder(${pickup.id})">Pick Up</button>
-            </div>
-        </div>
-    `;
+            <tr class="marketplace-table-row">
+                <td class="row-item-name">${escapeHtml(getItemLabel(pickup.item))}</td>
+                <td class="row-quantity">${pickup.quantity}</td>
+                <td class="row-player">${escapeHtml(pickup.sellerName || 'Unknown')}</td>
+                <td class="row-price">$${pickup.price.toLocaleString()}</td>
+                <td class="row-total">$${pickup.totalPrice.toLocaleString()}</td>
+                <td class="row-date" style="font-size: 11px; color: #888;">${dateStr}</td>
+                <td class="row-actions">
+                    <button class="action-btn success" onclick="pickupOrder(${pickup.id})">Pick Up</button>
+                </td>
+            </tr>
+        `;
     }).join('');
+    
+    container.innerHTML = `
+        <table class="marketplace-table">
+            <thead class="marketplace-table-header">
+                <tr>
+                    <th class="col-item">Item</th>
+                    <th class="col-quantity">Qty</th>
+                    <th class="col-player">Seller</th>
+                    <th class="col-price">Price</th>
+                    <th class="col-total">Total</th>
+                    <th class="col-date">Fulfilled</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
 }
 
 // Purchase item
@@ -705,66 +852,96 @@ function renderFilteredHistory(history) {
         return;
     }
 
-    container.innerHTML = history.map(entry => {
+    // Helper function to get name safely
+    const getName = (name, fallback = 'Unknown') => {
+        if (!name || name === 'undefined' || name.trim() === '') {
+            return fallback;
+        }
+        return name.trim();
+    };
+    
+    const tableRows = history.map(entry => {
         const date = new Date(entry.timestamp * 1000);
-        const dateStr = date.toLocaleString();
-        
-        // Helper function to get name safely
-        const getName = (name, fallback = 'Unknown') => {
-            if (!name || name === 'undefined' || name.trim() === '') {
-                return fallback;
-            }
-            return name.trim();
-        };
+        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
         
         let typeLabel = '';
-        let details = '';
+        let sellerName = '';
+        let buyerName = '';
+        let itemLabel = getItemLabel(entry.item);
+        let quantity = entry.quantity || 0;
+        let price = entry.price || 0;
+        let totalPrice = entry.totalPrice || 0;
         
         switch(entry.type) {
             case 'listing':
                 typeLabel = 'Listing Created';
-                const listingSeller = getName(entry.sellerName, 'Unknown Seller');
-                details = `${listingSeller} listed ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.price.toLocaleString()} each`;
+                sellerName = getName(entry.sellerName, 'Unknown');
+                buyerName = '-';
+                totalPrice = price * quantity;
                 break;
             case 'purchase':
                 typeLabel = 'Purchase';
-                const purchaseBuyer = getName(entry.buyerName, 'Unknown Buyer');
-                const purchaseSeller = getName(entry.sellerName, 'Unknown Seller');
-                details = `${purchaseBuyer} bought ${entry.quantity}x ${getItemLabel(entry.item)} from ${purchaseSeller} for $${entry.totalPrice.toLocaleString()}`;
+                sellerName = getName(entry.sellerName, 'Unknown');
+                buyerName = getName(entry.buyerName, 'Unknown');
                 break;
             case 'buyOrder':
                 typeLabel = 'Buy Order Created';
-                const orderBuyer = getName(entry.buyerName, 'Unknown Buyer');
-                details = `${orderBuyer} created buy order for ${entry.quantity}x ${getItemLabel(entry.item)} at $${entry.price.toLocaleString()} each`;
+                sellerName = '-';
+                buyerName = getName(entry.buyerName, 'Unknown');
+                totalPrice = price * quantity;
                 break;
             case 'fulfill':
                 typeLabel = 'Order Fulfilled';
-                const fulfillSeller = getName(entry.sellerName, 'Unknown Seller');
-                const fulfillBuyer = getName(entry.buyerName, 'Unknown Buyer');
-                details = `${fulfillSeller} fulfilled ${fulfillBuyer}'s order: ${entry.quantity}x ${getItemLabel(entry.item)} for $${entry.totalPrice.toLocaleString()}`;
+                sellerName = getName(entry.sellerName, 'Unknown');
+                buyerName = getName(entry.buyerName, 'Unknown');
                 break;
             case 'listingCancel':
                 typeLabel = 'Listing Cancelled';
-                const cancelListingSeller = getName(entry.sellerName, 'Unknown Seller');
-                details = `${cancelListingSeller} cancelled listing: ${entry.quantity}x ${getItemLabel(entry.item)}`;
+                sellerName = getName(entry.sellerName, 'Unknown');
+                buyerName = '-';
+                totalPrice = 0;
                 break;
             case 'buyOrderCancel':
                 typeLabel = 'Buy Order Cancelled';
-                const cancelOrderBuyer = getName(entry.buyerName, 'Unknown Buyer');
-                details = `${cancelOrderBuyer} cancelled buy order: ${entry.quantity}x ${getItemLabel(entry.item)}`;
+                sellerName = '-';
+                buyerName = getName(entry.buyerName, 'Unknown');
+                totalPrice = 0;
                 break;
         }
         
         return `
-            <div class="history-item">
-                <div class="item-name">${typeLabel}</div>
-                <div class="item-details">
-                    <div>${details}</div>
-                    <div style="margin-top: 10px; color: #888; font-size: 12px;">${dateStr}</div>
-                </div>
-            </div>
+            <tr class="history-table-row">
+                <td class="history-type">${escapeHtml(typeLabel)}</td>
+                <td class="history-item-name">${escapeHtml(itemLabel)}</td>
+                <td class="history-quantity">${quantity}</td>
+                <td class="history-player">${escapeHtml(sellerName)}</td>
+                <td class="history-player">${escapeHtml(buyerName)}</td>
+                <td class="history-unit-price">${price > 0 ? '$' + price.toLocaleString() : '-'}</td>
+                <td class="history-price">${totalPrice > 0 ? '$' + totalPrice.toLocaleString() : '-'}</td>
+                <td class="history-date">${dateStr}</td>
+            </tr>
         `;
     }).join('');
+    
+    container.innerHTML = `
+        <table class="history-table">
+            <thead class="history-table-header">
+                <tr>
+                    <th class="col-type">Type</th>
+                    <th class="col-item">Item</th>
+                    <th class="col-quantity">Qty</th>
+                    <th class="col-player">Seller</th>
+                    <th class="col-player">Buyer</th>
+                    <th class="col-price">Price</th>
+                    <th class="col-total">Total</th>
+                    <th class="col-date">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
 }
 
 // Show notification
