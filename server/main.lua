@@ -542,13 +542,18 @@ local function GetHistory(filters, callback)
                 
                 -- Build buyer name from firstname and lastname
                 local buyerName = ''
-                if row.buyer_firstname and row.buyer_lastname then
-                    buyerName = (row.buyer_firstname or '') .. ' ' .. (row.buyer_lastname or '')
-                elseif row.buyer_firstname then
-                    buyerName = row.buyer_firstname
-                elseif row.buyer_lastname then
-                    buyerName = row.buyer_lastname
+                local buyerFirst = row.buyer_firstname or ''
+                local buyerLast = row.buyer_lastname or ''
+                
+                -- Combine first and last name, handling empty strings
+                if buyerFirst ~= '' and buyerLast ~= '' then
+                    buyerName = buyerFirst .. ' ' .. buyerLast
+                elseif buyerFirst ~= '' then
+                    buyerName = buyerFirst
+                elseif buyerLast ~= '' then
+                    buyerName = buyerLast
                 end
+                
                 -- Trim whitespace
                 buyerName = string.gsub(buyerName, '^%s+', '')
                 buyerName = string.gsub(buyerName, '%s+$', '')
@@ -888,6 +893,16 @@ RegisterNetEvent('ns-market:openMarket', function()
     -- Refresh cache before sending
     LoadListings(function(listings)
         LoadBuyOrders(function(buyOrders)
+            -- Add seller server ID to listings for UI comparison
+            for _, listing in ipairs(listings) do
+                listing.seller = GetPlayerSourceFromCitizenid(listing.sellerCitizenid)
+            end
+            
+            -- Add buyer server ID to buy orders for UI comparison
+            for _, order in ipairs(buyOrders) do
+                order.buyer = GetPlayerSourceFromCitizenid(order.buyerCitizenid)
+            end
+            
             TriggerClientEvent('ns-market:openUI', source, listings, buyOrders, inventoryItems, allAvailableItems, Config.BlacklistedItems)
         end)
     end)
@@ -1158,6 +1173,78 @@ RegisterNetEvent('ns-market:purchaseItem', function(listingId, quantity)
     end
 end)
 
+-- Event: Cancel listing
+RegisterNetEvent('ns-market:cancelListing', function(listingId)
+    local source = source
+    local listing = GetListing(listingId)
+    
+    if not listing then
+        TriggerClientEvent('ns-market:notification', source, 'error', 'Listing not found')
+        return
+    end
+    
+    -- Get player citizenid
+    local citizenid = GetPlayerCitizenid(source)
+    if not citizenid then
+        TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+        return
+    end
+    
+    if listing.sellerCitizenid ~= citizenid then
+        TriggerClientEvent('ns-market:notification', source, 'error', 'You cannot cancel this listing')
+        return
+    end
+    
+    -- Return item to player
+    if GetResourceState('ox_inventory') == 'started' then
+        local added = exports.ox_inventory:AddItem(source, listing.item, listing.quantity, listing.metadata or {})
+        if not added then
+            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to return item to inventory')
+            return
+        end
+    else
+        if not AddItemToPlayer(source, listing.item, listing.quantity, listing.metadata or {}) then
+            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to return item to inventory')
+            return
+        end
+    end
+    
+    -- Get player info (use listing's seller name as fallback)
+    local firstname = GetPlayerFirstname(source)
+    local lastname = GetPlayerLastname(source)
+    
+    -- Fallback to listing's seller name if current retrieval fails
+    if (firstname == '' or not firstname) and listing.sellerFirstname then
+        firstname = listing.sellerFirstname
+    end
+    if (lastname == '' or not lastname) and listing.sellerLastname then
+        lastname = listing.sellerLastname
+    end
+    
+    -- Remove listing
+    RemoveListing(listingId, function(success)
+        if success then
+            -- Add to history
+            AddHistory({
+                type = 'listingCancel',
+                listingId = listingId,
+                sellerCitizenid = citizenid,
+                sellerFirstname = firstname,
+                sellerLastname = lastname,
+                item = listing.item,
+                quantity = listing.quantity,
+                price = listing.price,
+                timestamp = os.time()
+            })
+            
+            TriggerClientEvent('ns-market:notification', source, 'success', 'Listing cancelled successfully')
+            TriggerClientEvent('ns-market:refreshData', source)
+        else
+            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to cancel listing')
+        end
+    end)
+end)
+
 -- Event: Create buy order
 RegisterNetEvent('ns-market:createBuyOrder', function(item, quantity, price)
     local source = source
@@ -1280,9 +1367,17 @@ RegisterNetEvent('ns-market:cancelBuyOrder', function(orderId)
     -- Refund money
     AddMoneyToPlayer(source, order.totalPrice)
     
-    -- Get player info
+    -- Get player info (use order's buyer name as fallback)
     local firstname = GetPlayerFirstname(source)
     local lastname = GetPlayerLastname(source)
+    
+    -- Fallback to order's buyer name if current retrieval fails
+    if (firstname == '' or not firstname) and order.buyerFirstname then
+        firstname = order.buyerFirstname
+    end
+    if (lastname == '' or not lastname) and order.buyerLastname then
+        lastname = order.buyerLastname
+    end
     
     -- Remove buy order
     RemoveBuyOrder(orderId, function(success)
@@ -1576,6 +1671,16 @@ RegisterNetEvent('ns-market:requestRefresh', function()
     LoadListings(function(listings)
         LoadBuyOrders(function(buyOrders)
             LoadPickups(function(allPickups)
+                -- Add seller server ID to listings for UI comparison
+                for _, listing in ipairs(listings) do
+                    listing.seller = GetPlayerSourceFromCitizenid(listing.sellerCitizenid)
+                end
+                
+                -- Add buyer server ID to buy orders for UI comparison
+                for _, order in ipairs(buyOrders) do
+                    order.buyer = GetPlayerSourceFromCitizenid(order.buyerCitizenid)
+                end
+                
                 -- Get player's pickups
                 local playerPickups = {}
                 if citizenid then

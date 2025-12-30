@@ -7,11 +7,13 @@ let allAvailableItems = []; // All available items from ox_inventory
 let blacklistedItems = []; // Blacklisted items that cannot be used
 let itemLabelMap = {}; // Map of item name -> label
 let labelToNameMap = {}; // Map of item label -> name (for buy orders)
+let confirmCallback = null; // Callback for confirmation dialog
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     setupAutoRefresh();
+    setupConfirmDialog();
 });
 
 // Setup event listeners
@@ -29,9 +31,14 @@ function setupEventListeners() {
         closeMarketplace();
     });
 
-    // ESC key to close
+    // ESC key to close (only if confirmation dialog is not open)
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+            const confirmDialog = document.getElementById('confirmDialog');
+            if (!confirmDialog.classList.contains('hidden')) {
+                // Let confirmation dialog handle ESC
+                return;
+            }
             closeMarketplace();
         }
     });
@@ -104,6 +111,58 @@ function setupEventListeners() {
     document.getElementById('historyType').addEventListener('change', () => {
         applyHistoryFilters();
     });
+}
+
+// Setup confirmation dialog
+function setupConfirmDialog() {
+    const confirmDialog = document.getElementById('confirmDialog');
+    const confirmYes = document.getElementById('confirmYes');
+    const confirmNo = document.getElementById('confirmNo');
+    
+    confirmYes.addEventListener('click', () => {
+        if (confirmCallback) {
+            confirmCallback(true);
+            confirmCallback = null;
+        }
+        hideConfirmDialog();
+    });
+    
+    confirmNo.addEventListener('click', () => {
+        if (confirmCallback) {
+            confirmCallback(false);
+            confirmCallback = null;
+        }
+        hideConfirmDialog();
+    });
+    
+    // Close on ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !confirmDialog.classList.contains('hidden')) {
+            if (confirmCallback) {
+                confirmCallback(false);
+                confirmCallback = null;
+            }
+            hideConfirmDialog();
+        }
+    });
+}
+
+// Show confirmation dialog
+function showConfirmDialog(title, message, callback) {
+    const confirmDialog = document.getElementById('confirmDialog');
+    const confirmTitle = document.getElementById('confirmDialogTitle');
+    const confirmMessage = document.getElementById('confirmDialogMessage');
+    
+    confirmTitle.textContent = title;
+    confirmMessage.textContent = message;
+    confirmCallback = callback;
+    confirmDialog.classList.remove('hidden');
+}
+
+// Hide confirmation dialog
+function hideConfirmDialog() {
+    const confirmDialog = document.getElementById('confirmDialog');
+    confirmDialog.classList.add('hidden');
 }
 
 // Switch tabs
@@ -332,9 +391,12 @@ function renderListings(listings) {
                 <td class="row-price">$${listing.price.toLocaleString()}</td>
                 <td class="row-total">$${totalPrice.toLocaleString()}</td>
                 <td class="row-actions">
-                    <input type="number" class="quantity-input" id="qty-${listing.id}" min="1" max="${listing.quantity}" value="1">
-                    <button class="action-btn success" onclick="purchaseItem(${listing.id})">Buy</button>
-                    ${listing.seller === GetPlayerServerId() ? `<button class="action-btn danger" onclick="cancelListing(${listing.id})">Cancel</button>` : ''}
+                    ${listing.seller === GetPlayerServerId() ? 
+                        `<span class="action-spacer"></span>
+                        <button class="action-btn danger" onclick="cancelListing(${listing.id})">Cancel</button>` : 
+                        `<input type="number" class="quantity-input" id="qty-${listing.id}" min="1" max="${listing.quantity}" value="1">
+                        <button class="action-btn success" onclick="purchaseItem(${listing.id})">Buy</button>`
+                    }
                 </td>
             </tr>
         `;
@@ -379,10 +441,11 @@ function renderBuyOrders(orders) {
                 <td class="row-price">$${order.price.toLocaleString()}</td>
                 <td class="row-total">$${totalPrice.toLocaleString()}</td>
                 <td class="row-actions">
-                    <input type="number" class="quantity-input" id="qty-order-${order.id}" min="1" max="${order.quantity}" value="1">
                     ${order.buyer === GetPlayerServerId() ? 
-                        `<button class="action-btn danger" onclick="cancelBuyOrder(${order.id})">Cancel</button>` : 
-                        `<button class="action-btn success" onclick="fulfillBuyOrder(${order.id})">Fulfill</button>`
+                        `<span class="action-spacer"></span>
+                        <button class="action-btn danger" onclick="cancelBuyOrder(${order.id})">Cancel</button>` : 
+                        `<input type="number" class="quantity-input" id="qty-order-${order.id}" min="1" max="${order.quantity}" value="1">
+                        <button class="action-btn success" onclick="fulfillBuyOrder(${order.id})">Fulfill</button>`
                     }
                 </td>
             </tr>
@@ -592,9 +655,12 @@ function filterListings(searchTerm) {
                 <td class="row-price">$${listing.price.toLocaleString()}</td>
                 <td class="row-total">$${totalPrice.toLocaleString()}</td>
                 <td class="row-actions">
-                    <input type="number" class="quantity-input" id="qty-${listing.id}" min="1" max="${listing.quantity}" value="1">
-                    <button class="action-btn success" onclick="purchaseItem(${listing.id})">Buy</button>
-                    ${listing.seller === GetPlayerServerId() ? `<button class="action-btn danger" onclick="cancelListing(${listing.id})">Cancel</button>` : ''}
+                    ${listing.seller === GetPlayerServerId() ? 
+                        `<span class="action-spacer"></span>
+                        <button class="action-btn danger" onclick="cancelListing(${listing.id})">Cancel</button>` : 
+                        `<input type="number" class="quantity-input" id="qty-${listing.id}" min="1" max="${listing.quantity}" value="1">
+                        <button class="action-btn success" onclick="purchaseItem(${listing.id})">Buy</button>`
+                    }
                 </td>
             </tr>
         `;
@@ -644,10 +710,11 @@ function filterBuyOrders(searchTerm) {
                 <td class="row-price">$${order.price.toLocaleString()}</td>
                 <td class="row-total">$${totalPrice.toLocaleString()}</td>
                 <td class="row-actions">
-                    <input type="number" class="quantity-input" id="qty-order-${order.id}" min="1" max="${order.quantity}" value="1">
                     ${order.buyer === GetPlayerServerId() ? 
-                        `<button class="action-btn danger" onclick="cancelBuyOrder(${order.id})">Cancel</button>` : 
-                        `<button class="action-btn success" onclick="fulfillBuyOrder(${order.id})">Fulfill</button>`
+                        `<span class="action-spacer"></span>
+                        <button class="action-btn danger" onclick="cancelBuyOrder(${order.id})">Cancel</button>` : 
+                        `<input type="number" class="quantity-input" id="qty-order-${order.id}" min="1" max="${order.quantity}" value="1">
+                        <button class="action-btn success" onclick="fulfillBuyOrder(${order.id})">Fulfill</button>`
                     }
                 </td>
             </tr>
@@ -743,32 +810,46 @@ function purchaseItem(listingId) {
 
 // Cancel listing
 function cancelListing(listingId) {
-    if (!confirm('Are you sure you want to cancel this listing?')) {
-        return;
-    }
-    
-    fetch('https://' + GetParentResourceName() + '/cancelListing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            listingId: listingId
-        })
-    });
+    showConfirmDialog(
+        'Cancel Listing',
+        'Are you sure you want to cancel this listing?',
+        (confirmed) => {
+            if (confirmed) {
+                fetch('https://' + GetParentResourceName() + '/cancelListing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        listingId: listingId
+                    })
+                }).catch(err => {
+                    console.error('Error cancelling listing:', err);
+                    showNotification('error', 'Failed to cancel listing');
+                });
+            }
+        }
+    );
 }
 
 // Cancel buy order
 function cancelBuyOrder(orderId) {
-    if (!confirm('Are you sure you want to cancel this buy order?')) {
-        return;
-    }
-    
-    fetch('https://' + GetParentResourceName() + '/cancelBuyOrder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            orderId: orderId
-        })
-    });
+    showConfirmDialog(
+        'Cancel Buy Order',
+        'Are you sure you want to cancel this buy order?',
+        (confirmed) => {
+            if (confirmed) {
+                fetch('https://' + GetParentResourceName() + '/cancelBuyOrder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderId: orderId
+                    })
+                }).catch(err => {
+                    console.error('Error cancelling buy order:', err);
+                    showNotification('error', 'Failed to cancel buy order');
+                });
+            }
+        }
+    );
 }
 
 // Fulfill buy order

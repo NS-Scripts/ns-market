@@ -21,7 +21,6 @@ body {
     background: rgba(0, 0, 0, 0.95);
     border: 2px solid rgba(0, 150, 255, 0.3);
     border-radius: 10px;
-    box-shadow: 0 0 15px rgba(0, 150, 255, 0.5), inset 0 0 15px rgba(0, 150, 255, 0.1);
     display: flex;
     flex-direction: column;
     color: #ffffff;
@@ -61,7 +60,6 @@ body {
     font-size: 32px;
     font-weight: bold;
     color: #00aaff;
-    text-shadow: 0 0 10px rgba(0, 150, 255, 0.8);
     letter-spacing: 2px;
 }
 
@@ -84,7 +82,6 @@ body {
 .close-btn:hover {
     background: rgba(255, 0, 0, 0.2);
     border-color: #ff4444;
-    box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
 }
 
 /* Tabs */
@@ -113,13 +110,11 @@ body {
 .tab-btn:hover {
     background: rgba(0, 150, 255, 0.2);
     border-color: rgba(0, 150, 255, 0.6);
-    box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
 }
 
 .tab-btn.active {
     background: rgba(0, 150, 255, 0.3);
     border-color: #00aaff;
-    box-shadow: 0 0 15px rgba(0, 150, 255, 0.5);
     color: #00aaff;
 }
 
@@ -159,7 +154,6 @@ body {
 .search-input:focus {
     outline: none;
     border-color: #00aaff;
-    box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
 }
 
 .search-btn {
@@ -174,7 +168,6 @@ body {
 
 .search-btn:hover {
     background: rgba(0, 150, 255, 0.3);
-    box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
 }
 
 /* Listings, Orders, and Pickups Container - consolidated */
@@ -401,6 +394,15 @@ body {
 .marketplace-table-row .row-actions {
     white-space: nowrap;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.action-spacer {
+    width: 80px;
+    display: inline-block;
 }
 
 /* Row cell alignment for date column */
@@ -429,7 +431,6 @@ body {
     font-weight: bold;
     color: #00aaff;
     margin-bottom: 10px;
-    text-shadow: 0 0 5px rgba(0, 150, 255, 0.5);
 }
 
 .item-details {
@@ -469,7 +470,6 @@ body {
 
 .action-btn:hover {
     background: rgba(0, 150, 255, 0.3);
-    box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
 }
 
 .action-btn.danger {
@@ -480,7 +480,6 @@ body {
 
 .action-btn.danger:hover {
     background: rgba(255, 0, 0, 0.3);
-    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
 }
 
 .action-btn.success {
@@ -491,7 +490,6 @@ body {
 
 .action-btn.success:hover {
     background: rgba(0, 255, 136, 0.3);
-    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
 }
 
 /* Form */
@@ -526,7 +524,6 @@ body {
 .form-input:focus {
     outline: none;
     border-color: #00aaff;
-    box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
 }
 
 .form-input select {
@@ -554,7 +551,6 @@ body {
     overflow-y: auto;
     z-index: 1000;
     margin-top: 2px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .suggestion-item {
@@ -606,7 +602,6 @@ body {
 
 .submit-btn:hover {
     background: rgba(0, 150, 255, 0.5);
-    box-shadow: 0 0 20px rgba(0, 150, 255, 0.5);
 }
 
 /* History Filters */
@@ -630,7 +625,6 @@ body {
 .filter-select:focus {
     outline: none;
     border-color: #00aaff;
-    box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
 }
 
 .filter-btn {
@@ -646,7 +640,6 @@ body {
 
 .filter-btn:hover {
     background: rgba(0, 150, 255, 0.3);
-    box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
 }
 
 /* Empty State */
@@ -677,23 +670,19 @@ body {
     color: #ffffff;
     font-size: 14px;
     min-width: 300px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     animation: slideIn 0.3s ease-out;
 }
 
 .notification.success {
     border-color: #00ff88;
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
 }
 
 .notification.error {
     border-color: #ff4444;
-    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
 }
 
 .notification.info {
     border-color: #00aaff;
-    box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
 }
 
 @keyframes slideIn {
@@ -740,6 +729,87 @@ body {
 .quantity-input:focus {
     outline: none;
     border-color: #00aaff;
-    box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
+}
+
+/* Confirmation Dialog */
+.confirm-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.confirm-dialog.hidden {
+    display: none;
+}
+
+.confirm-dialog-content {
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid rgba(0, 150, 255, 0.5);
+    border-radius: 10px;
+    padding: 30px;
+    min-width: 400px;
+    max-width: 500px;
+}
+
+.confirm-dialog-title {
+    color: #00aaff;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.confirm-dialog-message {
+    color: #ffffff;
+    font-size: 16px;
+    margin-bottom: 25px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.confirm-dialog-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.confirm-btn {
+    padding: 12px 30px;
+    border: 2px solid;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    min-width: 100px;
+}
+
+.confirm-btn.confirm-yes {
+    background: rgba(255, 0, 0, 0.2);
+    border-color: #ff4444;
+    color: #ff4444;
+}
+
+.confirm-btn.confirm-yes:hover {
+    background: rgba(255, 0, 0, 0.3);
+}
+
+.confirm-btn.confirm-no {
+    background: rgba(0, 150, 255, 0.2);
+    border-color: #00aaff;
+    color: #00aaff;
+}
+
+.confirm-btn.confirm-no:hover {
+    background: rgba(0, 150, 255, 0.3);
 }
 
