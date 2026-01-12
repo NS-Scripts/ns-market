@@ -71,7 +71,7 @@ AddEventHandler('onResourceStop', function(resourceName)
 end)
 
 -- Open marketplace UI
-RegisterNetEvent('ns-market:openUI', function(listings, buyOrders, inventoryItems, allAvailableItems, blacklistedItems, pickups)
+RegisterNetEvent('ns-market:openUI', function(listings, buyOrders, inventoryItems, allAvailableItems, availableItems, pickups)
     if isMarketOpen then return end
 
     isMarketOpen = true
@@ -82,7 +82,7 @@ RegisterNetEvent('ns-market:openUI', function(listings, buyOrders, inventoryItem
         buyOrders = buyOrders,
         inventoryItems = inventoryItems or {},
         allAvailableItems = allAvailableItems or {},
-        blacklistedItems = blacklistedItems or {},
+        availableItems = availableItems or {},
         pickups = pickups or {},
         playerId = GetPlayerServerId(PlayerId())
     })
@@ -244,13 +244,7 @@ CreateThread(function()
             DisableControlAction(0, 322, true) -- ESC
             DisableControlAction(0, 106, true) -- VehicleMouseControlOverride
         else
-            -- Re-enable controls when UI is closed
-            EnableControlAction(0, 1, true) -- LookLeftRight
-            EnableControlAction(0, 2, true) -- LookUpDown
-            EnableControlAction(0, 142, true) -- MeleeAttackAlternate
-            EnableControlAction(0, 18, true) -- Enter
-            EnableControlAction(0, 322, true) -- ESC
-            EnableControlAction(0, 106, true) -- VehicleMouseControlOverride
+            -- Don't interfere with controls when UI is closed - let other scripts manage them
             Wait(500)
         end
     end

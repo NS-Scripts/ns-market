@@ -3,8 +3,8 @@ let currentBuyOrders = [];
 let currentHistory = [];
 let currentPickups = [];
 let inventoryItems = [];
-let allAvailableItems = []; // All available items from ox_inventory
-let blacklistedItems = []; // Blacklisted items that cannot be used
+let allAvailableItems = []; // All available items from ox_inventory (filtered by server)
+let availableItems = []; // Available items whitelist from config
 let itemLabelMap = {}; // Map of item name -> label
 let labelToNameMap = {}; // Map of item label -> name (for buy orders)
 let confirmCallback = null; // Callback for confirmation dialog
@@ -330,8 +330,8 @@ function handleCreateBuyOrder() {
         return;
     }
 
-    // Check if item is blacklisted
-    if (isItemBlacklisted(itemName)) {
+    // Check if item is available
+    if (!isItemAvailable(itemName)) {
         showNotification('error', 'This item cannot be ordered on the marketplace');
         return;
     }
@@ -1089,24 +1089,29 @@ function updateItemLabelMap() {
     });
 }
 
-// Check if item is blacklisted
-function isItemBlacklisted(itemName) {
-    if (!itemName || !blacklistedItems || blacklistedItems.length === 0) {
+// Check if item is available (whitelist check)
+function isItemAvailable(itemName) {
+    if (!itemName) {
         return false;
+    }
+    
+    // If availableItems is empty, all items are available
+    if (!availableItems || availableItems.length === 0) {
+        return true;
     }
     
     // Normalize item name for comparison
     const normalizedItem = itemName.toLowerCase();
     const normalizedItemUpper = itemName.toUpperCase();
     
-    return blacklistedItems.some(blacklisted => {
-        const normalizedBlacklisted = blacklisted.toLowerCase();
-        const normalizedBlacklistedUpper = blacklisted.toUpperCase();
+    return availableItems.some(available => {
+        const normalizedAvailable = available.toLowerCase();
+        const normalizedAvailableUpper = available.toUpperCase();
         
         // Check exact match (case-insensitive)
-        return normalizedItem === normalizedBlacklisted || 
-               normalizedItemUpper === normalizedBlacklistedUpper ||
-               itemName === blacklisted;
+        return normalizedItem === normalizedAvailable || 
+               normalizedItemUpper === normalizedAvailableUpper ||
+               itemName === available;
     });
 }
 
@@ -1114,8 +1119,8 @@ function isItemBlacklisted(itemName) {
 function updateLabelToNameMap() {
     labelToNameMap = {};
     allAvailableItems.forEach(item => {
-        // Skip blacklisted items
-        if (item.name && item.label && !isItemBlacklisted(item.name)) {
+        // Only include items that are in the available items list
+        if (item.name && item.label && isItemAvailable(item.name)) {
             // Handle case-insensitive matching and multiple items with same label
             const labelLower = item.label.toLowerCase();
             if (!labelToNameMap[labelLower]) {
@@ -1190,12 +1195,12 @@ function showItemSuggestions(input) {
     const inputLower = input.toLowerCase();
     const suggestions = [];
     
-    // Find matching items (excluding blacklisted)
+    // Find matching items (only available items)
     for (const [label, items] of Object.entries(labelToNameMap)) {
         if (label.includes(inputLower) || inputLower.includes(label)) {
             items.forEach(item => {
-                // Only add if not blacklisted
-                if (!isItemBlacklisted(item.name)) {
+                // Only add if available
+                if (isItemAvailable(item.name)) {
                     suggestions.push(item.label);
                 }
             });
@@ -1296,9 +1301,9 @@ window.addEventListener('message', function(event) {
             currentPickups = data.pickups || [];
             inventoryItems = data.inventoryItems || [];
             allAvailableItems = data.allAvailableItems || [];
-            blacklistedItems = data.blacklistedItems || [];
+            availableItems = data.availableItems || [];
             updateItemLabelMap(); // Update label map when opening
-            updateLabelToNameMap(); // Update label-to-name map when opening (filters blacklisted)
+            updateLabelToNameMap(); // Update label-to-name map when opening (filters by available items)
             if (data.playerId) {
                 playerServerId = data.playerId;
             }

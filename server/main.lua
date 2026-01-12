@@ -632,10 +632,15 @@ local function GetPlayerBuyOrdersCount(citizenid, callback)
     end
 end
 
--- Helper function to check if item is blacklisted
-local function IsItemBlacklisted(item)
+-- Helper function to check if item is available (whitelist check)
+local function IsItemAvailable(item)
     if not item or type(item) ~= 'string' then
         return false
+    end
+    
+    -- If AvailableItems is empty, all items are available
+    if not Config.AvailableItems or #Config.AvailableItems == 0 then
+        return true
     end
     
     -- Normalize item name for comparison (lowercase, but keep weapon_ prefix uppercase)
@@ -644,13 +649,13 @@ local function IsItemBlacklisted(item)
         normalizedItem = item:upper()
     end
     
-    for _, blacklisted in ipairs(Config.BlacklistedItems) do
-        local normalizedBlacklisted = blacklisted:lower()
-        if normalizedBlacklisted:sub(1, 7) == 'weapon_' then
-            normalizedBlacklisted = blacklisted:upper()
+    for _, available in ipairs(Config.AvailableItems) do
+        local normalizedAvailable = available:lower()
+        if normalizedAvailable:sub(1, 7) == 'weapon_' then
+            normalizedAvailable = available:upper()
         end
         
-        if normalizedItem == normalizedBlacklisted or item == blacklisted then
+        if normalizedItem == normalizedAvailable or item == available then
             return true
         end
     end
@@ -841,8 +846,8 @@ local function GetAllAvailableItems()
         
         if success and itemList then
             for itemName, itemData in pairs(itemList) do
-                -- Skip blacklisted items
-                if not IsItemBlacklisted(itemName) then
+                -- Only include items that are in the available items list
+                if IsItemAvailable(itemName) then
                     table.insert(allItems, {
                         name = itemName,
                         label = itemData.label or itemName
@@ -864,8 +869,8 @@ local function GetPlayerInventoryItems(source)
         if inventory and inventory.items then
             for _, item in pairs(inventory.items) do
                 if item.count and item.count > 0 then
-                    -- Skip blacklisted items
-                    if not IsItemBlacklisted(item.name) then
+                    -- Only include items that are in the available items list
+                    if IsItemAvailable(item.name) then
                         table.insert(items, {
                             name = item.name,
                             label = item.label or item.name,
@@ -903,7 +908,7 @@ RegisterNetEvent('ns-market:openMarket', function()
                 order.buyer = GetPlayerSourceFromCitizenid(order.buyerCitizenid)
             end
             
-            TriggerClientEvent('ns-market:openUI', source, listings, buyOrders, inventoryItems, allAvailableItems, Config.BlacklistedItems)
+            TriggerClientEvent('ns-market:openUI', source, listings, buyOrders, inventoryItems, allAvailableItems, Config.AvailableItems)
         end)
     end)
 end)
@@ -920,7 +925,7 @@ RegisterNetEvent('ns-market:listItem', function(item, quantity, price, metadata)
     local source = source
     
     -- Validation
-    if IsItemBlacklisted(item) then
+    if not IsItemAvailable(item) then
         TriggerClientEvent('ns-market:notification', source, 'error', 'This item cannot be listed on the marketplace')
         return
     end
@@ -1261,7 +1266,7 @@ RegisterNetEvent('ns-market:createBuyOrder', function(item, quantity, price)
         return
     end
     
-    if IsItemBlacklisted(item) then
+    if not IsItemAvailable(item) then
         TriggerClientEvent('ns-market:notification', source, 'error', 'This item cannot be ordered on the marketplace')
         return
     end
