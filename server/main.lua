@@ -37,7 +37,7 @@ end
 
 -- Load all listings from database
 local function LoadListings(callback)
-    MySQLQuery('SELECT * FROM ns_marketplace_listings ORDER BY id ASC', {}, function(result)
+    MySQLQuery('SELECT * FROM bs_marketplace_listings ORDER BY id ASC', {}, function(result)
         if result then
             cache.listings = {}
             for _, row in ipairs(result) do
@@ -68,7 +68,7 @@ end
 
 -- Load all buy orders from database
 local function LoadBuyOrders(callback)
-    MySQLQuery('SELECT * FROM ns_marketplace_buy_orders ORDER BY id ASC', {}, function(result)
+    MySQLQuery('SELECT * FROM bs_marketplace_buy_orders ORDER BY id ASC', {}, function(result)
         if result then
             cache.buyOrders = {}
             for _, row in ipairs(result) do
@@ -120,7 +120,7 @@ end
 
 -- Load all pickups from database
 local function LoadPickups(callback)
-    MySQLQuery('SELECT * FROM ns_marketplace_pickups WHERE picked_up = 0 ORDER BY fulfilled_timestamp ASC', {}, function(result)
+    MySQLQuery('SELECT * FROM bs_marketplace_pickups WHERE picked_up = 0 ORDER BY fulfilled_timestamp ASC', {}, function(result)
         if result then
             cache.pickups = {}
             for _, row in ipairs(result) do
@@ -167,7 +167,7 @@ end
 
 -- Get player pickups
 local function GetPlayerPickups(citizenid, callback)
-    MySQLQuery('SELECT * FROM ns_marketplace_pickups WHERE buyer_citizenid = ? AND picked_up = 0 ORDER BY fulfilled_timestamp ASC', {citizenid}, function(result)
+    MySQLQuery('SELECT * FROM bs_marketplace_pickups WHERE buyer_citizenid = ? AND picked_up = 0 ORDER BY fulfilled_timestamp ASC', {citizenid}, function(result)
         if result then
             local pickups = {}
             for _, row in ipairs(result) do
@@ -202,7 +202,7 @@ end
 local function AddPickup(pickup, callback)
     local metadataJson = json.encode(pickup.metadata or {})
     local query = [[
-        INSERT INTO ns_marketplace_pickups (order_id, buyer_citizenid, buyer_firstname, buyer_lastname, seller_citizenid, seller_firstname, seller_lastname, item, quantity, price, total_price, metadata, fulfilled_timestamp)
+        INSERT INTO bs_marketplace_pickups (order_id, buyer_citizenid, buyer_firstname, buyer_lastname, seller_citizenid, seller_firstname, seller_lastname, item, quantity, price, total_price, metadata, fulfilled_timestamp)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ]]
     
@@ -235,7 +235,7 @@ end
 
 -- Mark pickup as collected
 local function MarkPickupCollected(id, callback)
-    MySQLUpdate('UPDATE ns_marketplace_pickups SET picked_up = 1 WHERE id = ?', {id}, function(affectedRows)
+    MySQLUpdate('UPDATE bs_marketplace_pickups SET picked_up = 1 WHERE id = ?', {id}, function(affectedRows)
         if affectedRows > 0 then
             -- Remove from cache
             for i, pickup in ipairs(cache.pickups) do
@@ -255,7 +255,7 @@ end
 local function AddListing(listing, callback)
     local metadataJson = json.encode(listing.metadata or {})
     local query = [[
-        INSERT INTO ns_marketplace_listings (seller_citizenid, seller_firstname, seller_lastname, item, quantity, price, total_price, metadata, created)
+        INSERT INTO bs_marketplace_listings (seller_citizenid, seller_firstname, seller_lastname, item, quantity, price, total_price, metadata, created)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ]]
     
@@ -284,7 +284,7 @@ end
 
 -- Remove listing
 local function RemoveListing(id, callback)
-    MySQLUpdate('DELETE FROM ns_marketplace_listings WHERE id = ?', {id}, function(affectedRows)
+    MySQLUpdate('DELETE FROM bs_marketplace_listings WHERE id = ?', {id}, function(affectedRows)
         if affectedRows > 0 then
             -- Remove from cache
             for i, listing in ipairs(cache.listings) do
@@ -334,7 +334,7 @@ local function UpdateListing(id, updates, callback)
     end
     
     table.insert(params, id)
-    local query = 'UPDATE ns_marketplace_listings SET ' .. table.concat(setParts, ', ') .. ' WHERE id = ?'
+    local query = 'UPDATE bs_marketplace_listings SET ' .. table.concat(setParts, ', ') .. ' WHERE id = ?'
     
     MySQLUpdate(query, params, function(affectedRows)
         if affectedRows > 0 then
@@ -357,7 +357,7 @@ end
 -- Add buy order
 local function AddBuyOrder(order, callback)
     local query = [[
-        INSERT INTO ns_marketplace_buy_orders (buyer_citizenid, buyer_firstname, buyer_lastname, item, quantity, price, total_price, created)
+        INSERT INTO bs_marketplace_buy_orders (buyer_citizenid, buyer_firstname, buyer_lastname, item, quantity, price, total_price, created)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ]]
     
@@ -385,7 +385,7 @@ end
 
 -- Remove buy order
 local function RemoveBuyOrder(id, callback)
-    MySQLUpdate('DELETE FROM ns_marketplace_buy_orders WHERE id = ?', {id}, function(affectedRows)
+    MySQLUpdate('DELETE FROM bs_marketplace_buy_orders WHERE id = ?', {id}, function(affectedRows)
         if affectedRows > 0 then
             -- Remove from cache
             for i, order in ipairs(cache.buyOrders) do
@@ -435,7 +435,7 @@ local function UpdateBuyOrder(id, updates, callback)
     end
     
     table.insert(params, id)
-    local query = 'UPDATE ns_marketplace_buy_orders SET ' .. table.concat(setParts, ', ') .. ' WHERE id = ?'
+    local query = 'UPDATE bs_marketplace_buy_orders SET ' .. table.concat(setParts, ', ') .. ' WHERE id = ?'
     
     MySQLUpdate(query, params, function(affectedRows)
         if affectedRows > 0 then
@@ -459,7 +459,7 @@ end
 local function AddHistory(entry, callback)
     
     local query = [[
-        INSERT INTO ns_marketplace_history 
+        INSERT INTO bs_marketplace_history 
         (type, listing_id, order_id, seller_citizenid, seller_firstname, seller_lastname, buyer_citizenid, buyer_firstname, buyer_lastname, item, quantity, price, total_price, fee, timestamp)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ]]
@@ -518,7 +518,7 @@ local function GetHistory(filters, callback)
     end
     
     local whereClause = #whereParts > 0 and ('WHERE ' .. table.concat(whereParts, ' AND ')) or ''
-    local query = 'SELECT * FROM ns_marketplace_history ' .. whereClause .. ' ORDER BY timestamp DESC LIMIT 1000'
+    local query = 'SELECT * FROM bs_marketplace_history ' .. whereClause .. ' ORDER BY timestamp DESC LIMIT 1000'
     
     MySQLQuery(query, params, function(result)
         if result then
@@ -593,7 +593,7 @@ end
 -- Get player listings count
 local function GetPlayerListingsCount(citizenid, callback)
     if callback then
-        MySQLQuery('SELECT COUNT(*) as count FROM ns_marketplace_listings WHERE seller_citizenid = ?', {citizenid}, function(result)
+        MySQLQuery('SELECT COUNT(*) as count FROM bs_marketplace_listings WHERE seller_citizenid = ?', {citizenid}, function(result)
             if result and result[1] then
                 callback(result[1].count)
             else
@@ -614,7 +614,7 @@ end
 -- Get player buy orders count
 local function GetPlayerBuyOrdersCount(citizenid, callback)
     if callback then
-        MySQLQuery('SELECT COUNT(*) as count FROM ns_marketplace_buy_orders WHERE buyer_citizenid = ?', {citizenid}, function(result)
+        MySQLQuery('SELECT COUNT(*) as count FROM bs_marketplace_buy_orders WHERE buyer_citizenid = ?', {citizenid}, function(result)
             if result and result[1] then
                 callback(result[1].count)
             else
@@ -707,7 +707,7 @@ local function AddItemToPlayer(source, item, quantity, metadata)
         return exports.esx_inventory:AddItem(source, item, quantity, metadata)
     else
         -- Fallback: trigger event for your inventory system
-        TriggerClientEvent('ns-market:addItem', source, item, quantity, metadata)
+        TriggerClientEvent('bs_market:addItem', source, item, quantity, metadata)
         return true
     end
 end
@@ -722,7 +722,7 @@ local function RemoveItemFromPlayer(source, item, quantity, metadata)
         return exports.esx_inventory:RemoveItem(source, item, quantity, metadata)
     else
         -- Fallback: trigger event for your inventory system
-        TriggerClientEvent('ns-market:removeItem', source, item, quantity, metadata)
+        TriggerClientEvent('bs_market:removeItem', source, item, quantity, metadata)
         return true
     end
 end
@@ -754,7 +754,7 @@ local function AddMoneyToPlayer(source, amount)
         return true
     else
         -- Fallback: trigger event for your money system
-        TriggerClientEvent('ns-market:addMoney', source, amount)
+        TriggerClientEvent('bs_market:addMoney', source, amount)
         return true
     end
 end
@@ -771,7 +771,7 @@ local function RemoveMoneyFromPlayer(source, amount)
         return true
     else
         -- Fallback: trigger event for your money system
-        TriggerClientEvent('ns-market:removeMoney', source, amount)
+        TriggerClientEvent('bs_market:removeMoney', source, amount)
         return true
     end
 end
@@ -888,7 +888,7 @@ local function GetPlayerInventoryItems(source)
 end
 
 -- Event: Open marketplace
-RegisterNetEvent('ns-market:openMarket', function()
+RegisterNetEvent('bs_market:openMarket', function()
     local source = source
     -- Get player inventory items
     local inventoryItems = GetPlayerInventoryItems(source)
@@ -908,48 +908,48 @@ RegisterNetEvent('ns-market:openMarket', function()
                 order.buyer = GetPlayerSourceFromCitizenid(order.buyerCitizenid)
             end
             
-            TriggerClientEvent('ns-market:openUI', source, listings, buyOrders, inventoryItems, allAvailableItems, Config.AvailableItems)
+            TriggerClientEvent('bs_market:openUI', source, listings, buyOrders, inventoryItems, allAvailableItems, Config.AvailableItems)
         end)
     end)
 end)
 
 -- Event: Get player inventory items
-RegisterNetEvent('ns-market:getInventoryItems', function()
+RegisterNetEvent('bs_market:getInventoryItems', function()
     local source = source
     local inventoryItems = GetPlayerInventoryItems(source)
-    TriggerClientEvent('ns-market:receiveInventoryItems', source, inventoryItems)
+    TriggerClientEvent('bs_market:receiveInventoryItems', source, inventoryItems)
 end)
 
 -- Event: List item for sale
-RegisterNetEvent('ns-market:listItem', function(item, quantity, price, metadata)
+RegisterNetEvent('bs_market:listItem', function(item, quantity, price, metadata)
     local source = source
     
     -- Validation
     if not IsItemAvailable(item) then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'This item cannot be listed on the marketplace')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'This item cannot be listed on the marketplace')
         return
     end
     
     if price < Config.Settings.minPrice or price > Config.Settings.maxPrice then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Invalid price range')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid price range')
         return
     end
     
     if quantity < 1 then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Invalid quantity')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid quantity')
         return
     end
     
     -- Get player citizenid
     local citizenid = GetPlayerCitizenid(source)
     if not citizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Unable to get player data')
         return
     end
     
     local playerListingsCount = GetPlayerListingsCount(citizenid)
     if playerListingsCount >= Config.Settings.maxListingsPerPlayer then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'You have reached the maximum number of listings')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'You have reached the maximum number of listings')
         return
     end
     
@@ -957,7 +957,7 @@ RegisterNetEvent('ns-market:listItem', function(item, quantity, price, metadata)
     if GetResourceState('ox_inventory') == 'started' then
         local hasItem = exports.ox_inventory:GetItemCount(source, item) or 0
         if hasItem < quantity then
-            TriggerClientEvent('ns-market:notification', source, 'error', 'You do not have enough of this item')
+            TriggerClientEvent('bs_market:notification', source, 'error', 'You do not have enough of this item')
             return
         end
         
@@ -975,7 +975,7 @@ RegisterNetEvent('ns-market:listItem', function(item, quantity, price, metadata)
         
         metadata = itemData and itemData.metadata or metadata or {}
     else
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Inventory system not available')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Inventory system not available')
         return
     end
     
@@ -996,7 +996,7 @@ RegisterNetEvent('ns-market:listItem', function(item, quantity, price, metadata)
         if not citizenid then
             -- Return item if we can't get citizenid
             exports.ox_inventory:AddItem(source, item, quantity, metadata)
-            TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+            TriggerClientEvent('bs_market:notification', source, 'error', 'Unable to get player data')
             return
         end
         
@@ -1027,43 +1027,43 @@ RegisterNetEvent('ns-market:listItem', function(item, quantity, price, metadata)
                     timestamp = os.time()
                 })
                 
-                TriggerClientEvent('ns-market:notification', source, 'success', 'Item listed successfully')
-                TriggerClientEvent('ns-market:refreshData', source)
+                TriggerClientEvent('bs_market:notification', source, 'success', 'Item listed successfully')
+                TriggerClientEvent('bs_market:refreshData', source)
             else
                 -- Return item if listing failed
                 AddItemToPlayer(source, item, quantity, metadata)
-                TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to create listing')
+                TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to create listing')
             end
         end)
     else
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to remove item from inventory')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to remove item from inventory')
     end
 end)
 
 -- Event: Purchase item
-RegisterNetEvent('ns-market:purchaseItem', function(listingId, quantity)
+RegisterNetEvent('bs_market:purchaseItem', function(listingId, quantity)
     local source = source
     local listing = GetListing(listingId)
     
     if not listing then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Listing not found')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Listing not found')
         return
     end
     
     -- Get buyer citizenid
     local buyerCitizenid = GetPlayerCitizenid(source)
     if not buyerCitizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Unable to get player data')
         return
     end
     
     if listing.sellerCitizenid == buyerCitizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'You cannot purchase your own listing')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'You cannot purchase your own listing')
         return
     end
     
     if quantity > listing.quantity then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Not enough quantity available')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Not enough quantity available')
         return
     end
     
@@ -1073,7 +1073,7 @@ RegisterNetEvent('ns-market:purchaseItem', function(listingId, quantity)
     
     -- Check if player has enough money
     if GetPlayerMoney(source) < totalPrice then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Insufficient funds')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Insufficient funds')
         return
     end
     
@@ -1083,7 +1083,7 @@ RegisterNetEvent('ns-market:purchaseItem', function(listingId, quantity)
     local buyerLastname = GetPlayerLastname(source)
     
     if not buyerCitizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Unable to get player data')
         return
     end
     
@@ -1158,45 +1158,45 @@ RegisterNetEvent('ns-market:purchaseItem', function(listingId, quantity)
                 end)
             end
             
-            TriggerClientEvent('ns-market:notification', source, 'success', 'Item purchased successfully')
+            TriggerClientEvent('bs_market:notification', source, 'success', 'Item purchased successfully')
             -- Notify seller if online
             if sellerSource then
-                TriggerClientEvent('ns-market:notification', sellerSource, 'info', 'Your item was sold')
-                TriggerClientEvent('ns-market:refreshData', sellerSource)
+                TriggerClientEvent('bs_market:notification', sellerSource, 'info', 'Your item was sold')
+                TriggerClientEvent('bs_market:refreshData', sellerSource)
             end
-            TriggerClientEvent('ns-market:refreshData', source)
+            TriggerClientEvent('bs_market:refreshData', source)
         else
             -- Refund money if item add failed
             AddMoneyToPlayer(source, totalPrice)
             if sellerSource then
                 RemoveMoneyFromPlayer(sellerSource, sellerAmount)
             end
-            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to add item to inventory')
+            TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to add item to inventory')
         end
     else
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to process payment')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to process payment')
     end
 end)
 
 -- Event: Cancel listing
-RegisterNetEvent('ns-market:cancelListing', function(listingId)
+RegisterNetEvent('bs_market:cancelListing', function(listingId)
     local source = source
     local listing = GetListing(listingId)
     
     if not listing then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Listing not found')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Listing not found')
         return
     end
     
     -- Get player citizenid
     local citizenid = GetPlayerCitizenid(source)
     if not citizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Unable to get player data')
         return
     end
     
     if listing.sellerCitizenid ~= citizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'You cannot cancel this listing')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'You cannot cancel this listing')
         return
     end
     
@@ -1204,12 +1204,12 @@ RegisterNetEvent('ns-market:cancelListing', function(listingId)
     if GetResourceState('ox_inventory') == 'started' then
         local added = exports.ox_inventory:AddItem(source, listing.item, listing.quantity, listing.metadata or {})
         if not added then
-            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to return item to inventory')
+            TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to return item to inventory')
             return
         end
     else
         if not AddItemToPlayer(source, listing.item, listing.quantity, listing.metadata or {}) then
-            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to return item to inventory')
+            TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to return item to inventory')
             return
         end
     end
@@ -1242,55 +1242,55 @@ RegisterNetEvent('ns-market:cancelListing', function(listingId)
                 timestamp = os.time()
             })
             
-            TriggerClientEvent('ns-market:notification', source, 'success', 'Listing cancelled successfully')
-            TriggerClientEvent('ns-market:refreshData', source)
+            TriggerClientEvent('bs_market:notification', source, 'success', 'Listing cancelled successfully')
+            TriggerClientEvent('bs_market:refreshData', source)
         else
-            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to cancel listing')
+            TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to cancel listing')
         end
     end)
 end)
 
 -- Event: Create buy order
-RegisterNetEvent('ns-market:createBuyOrder', function(item, quantity, price)
+RegisterNetEvent('bs_market:createBuyOrder', function(item, quantity, price)
     local source = source
     
     -- Validation
     if not item or item == '' then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Please enter an item name')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Please enter an item name')
         return
     end
     
     -- Check if item exists in ox_inventory
     if not DoesItemExist(item) then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'This item does not exist in the inventory system')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'This item does not exist in the inventory system')
         return
     end
     
     if not IsItemAvailable(item) then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'This item cannot be ordered on the marketplace')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'This item cannot be ordered on the marketplace')
         return
     end
     
     if price < Config.Settings.minPrice or price > Config.Settings.maxPrice then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Invalid price range')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid price range')
         return
     end
     
     if quantity < 1 then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Invalid quantity')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid quantity')
         return
     end
     
     -- Get player citizenid
     local citizenid = GetPlayerCitizenid(source)
     if not citizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Unable to get player data')
         return
     end
     
     local playerBuyOrdersCount = GetPlayerBuyOrdersCount(citizenid)
     if playerBuyOrdersCount >= Config.Settings.maxBuyOrdersPerPlayer then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'You have reached the maximum number of buy orders')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'You have reached the maximum number of buy orders')
         return
     end
     
@@ -1298,7 +1298,7 @@ RegisterNetEvent('ns-market:createBuyOrder', function(item, quantity, price)
     
     -- Check if player has enough money
     if GetPlayerMoney(source) < totalPrice then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Insufficient funds')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Insufficient funds')
         return
     end
     
@@ -1334,38 +1334,38 @@ RegisterNetEvent('ns-market:createBuyOrder', function(item, quantity, price)
                     timestamp = os.time()
                 })
                 
-                TriggerClientEvent('ns-market:notification', source, 'success', 'Buy order created successfully')
-                TriggerClientEvent('ns-market:refreshData', source)
+                TriggerClientEvent('bs_market:notification', source, 'success', 'Buy order created successfully')
+                TriggerClientEvent('bs_market:refreshData', source)
             else
                 -- Refund money if order creation failed
                 AddMoneyToPlayer(source, totalPrice)
-                TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to create buy order')
+                TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to create buy order')
             end
         end)
     else
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to reserve funds')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to reserve funds')
     end
 end)
 
 -- Event: Cancel buy order
-RegisterNetEvent('ns-market:cancelBuyOrder', function(orderId)
+RegisterNetEvent('bs_market:cancelBuyOrder', function(orderId)
     local source = source
     local order = GetBuyOrder(orderId)
     
     if not order then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Buy order not found')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Buy order not found')
         return
     end
     
     -- Get player citizenid
     local citizenid = GetPlayerCitizenid(source)
     if not citizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Unable to get player data')
         return
     end
     
     if order.buyerCitizenid ~= citizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'You cannot cancel this buy order')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'You cannot cancel this buy order')
         return
     end
     
@@ -1402,34 +1402,34 @@ RegisterNetEvent('ns-market:cancelBuyOrder', function(orderId)
         end
     end)
     
-    TriggerClientEvent('ns-market:notification', source, 'success', 'Buy order cancelled')
-    TriggerClientEvent('ns-market:refreshData', source)
+    TriggerClientEvent('bs_market:notification', source, 'success', 'Buy order cancelled')
+    TriggerClientEvent('bs_market:refreshData', source)
 end)
 
 -- Event: Fulfill buy order
-RegisterNetEvent('ns-market:fulfillBuyOrder', function(orderId, quantity)
+RegisterNetEvent('bs_market:fulfillBuyOrder', function(orderId, quantity)
     local source = source
     local order = GetBuyOrder(orderId)
     
     if not order then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Buy order not found')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Buy order not found')
         return
     end
     
     -- Get seller citizenid
     local sellerCitizenid = GetPlayerCitizenid(source)
     if not sellerCitizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Unable to get player data')
         return
     end
     
     if order.buyerCitizenid == sellerCitizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'You cannot fulfill your own buy order')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'You cannot fulfill your own buy order')
         return
     end
     
     if quantity > order.quantity then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Invalid quantity')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid quantity')
         return
     end
     
@@ -1437,7 +1437,7 @@ RegisterNetEvent('ns-market:fulfillBuyOrder', function(orderId, quantity)
     if GetResourceState('ox_inventory') == 'started' then
         local hasItem = exports.ox_inventory:GetItemCount(source, order.item) or 0
         if hasItem < quantity then
-            TriggerClientEvent('ns-market:notification', source, 'error', 'You do not have enough of this item')
+            TriggerClientEvent('bs_market:notification', source, 'error', 'You do not have enough of this item')
             return
         end
         
@@ -1543,26 +1543,26 @@ RegisterNetEvent('ns-market:fulfillBuyOrder', function(orderId, quantity)
                         end)
                     end
                     
-                    TriggerClientEvent('ns-market:notification', source, 'success', 'Buy order fulfilled successfully. Buyer can pick up at the marketplace.')
+                    TriggerClientEvent('bs_market:notification', source, 'success', 'Buy order fulfilled successfully. Buyer can pick up at the marketplace.')
                     -- Notify buyer if online
                     local buyerSource = GetPlayerSourceFromCitizenid(order.buyerCitizenid)
                     if buyerSource then
-                        TriggerClientEvent('ns-market:notification', buyerSource, 'info', 'Your buy order was fulfilled! Pick it up at the marketplace.')
-                        TriggerClientEvent('ns-market:refreshData', buyerSource)
+                        TriggerClientEvent('bs_market:notification', buyerSource, 'info', 'Your buy order was fulfilled! Pick it up at the marketplace.')
+                        TriggerClientEvent('bs_market:refreshData', buyerSource)
                     end
-                    TriggerClientEvent('ns-market:refreshData', source)
+                    TriggerClientEvent('bs_market:refreshData', source)
                 else
                     -- Return item if pickup creation failed
                     exports.ox_inventory:AddItem(source, order.item, quantity, metadata)
                     RemoveMoneyFromPlayer(source, sellerAmount)
-                    TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to create pickup')
+                    TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to create pickup')
                 end
             end)
         else
-            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to remove item from inventory')
+            TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to remove item from inventory')
         end
     else
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Inventory system not available')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Inventory system not available')
         return
     end
 end)
@@ -1570,13 +1570,13 @@ end)
 -- Event: Cancel listing (duplicate - already updated above)
 
 -- Event: Pickup fulfilled order
-RegisterNetEvent('ns-market:pickupOrder', function(pickupId)
+RegisterNetEvent('bs_market:pickupOrder', function(pickupId)
     local source = source
     
     -- Get player citizenid
     local citizenid = GetPlayerCitizenid(source)
     if not citizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Unable to get player data')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Unable to get player data')
         return
     end
     
@@ -1591,7 +1591,7 @@ RegisterNetEvent('ns-market:pickupOrder', function(pickupId)
     
     if not pickup then
         -- Try loading from database
-        MySQLQuery('SELECT * FROM ns_marketplace_pickups WHERE id = ? AND picked_up = 0', {pickupId}, function(result)
+        MySQLQuery('SELECT * FROM bs_marketplace_pickups WHERE id = ? AND picked_up = 0', {pickupId}, function(result)
             if result and result[1] then
                 local row = result[1]
                 if row.buyer_citizenid == citizenid then
@@ -1603,21 +1603,21 @@ RegisterNetEvent('ns-market:pickupOrder', function(pickupId)
                             -- Mark as collected
                             MarkPickupCollected(pickupId, function(success)
                                 if success then
-                                    TriggerClientEvent('ns-market:notification', source, 'success', 'Order picked up successfully')
-                                    TriggerClientEvent('ns-market:refreshData', source)
+                                    TriggerClientEvent('bs_market:notification', source, 'success', 'Order picked up successfully')
+                                    TriggerClientEvent('bs_market:refreshData', source)
                                 end
                             end)
                         else
-                            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to add item to inventory')
+                            TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to add item to inventory')
                         end
                     else
-                        TriggerClientEvent('ns-market:notification', source, 'error', 'Inventory system not available')
+                        TriggerClientEvent('bs_market:notification', source, 'error', 'Inventory system not available')
                     end
                 else
-                    TriggerClientEvent('ns-market:notification', source, 'error', 'This pickup does not belong to you')
+                    TriggerClientEvent('bs_market:notification', source, 'error', 'This pickup does not belong to you')
                 end
             else
-                TriggerClientEvent('ns-market:notification', source, 'error', 'Pickup not found')
+                TriggerClientEvent('bs_market:notification', source, 'error', 'Pickup not found')
             end
         end)
         return
@@ -1625,7 +1625,7 @@ RegisterNetEvent('ns-market:pickupOrder', function(pickupId)
     
     -- Verify ownership
     if pickup.buyerCitizenid ~= citizenid then
-        TriggerClientEvent('ns-market:notification', source, 'error', 'This pickup does not belong to you')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'This pickup does not belong to you')
         return
     end
     
@@ -1636,39 +1636,39 @@ RegisterNetEvent('ns-market:pickupOrder', function(pickupId)
             -- Mark as collected
             MarkPickupCollected(pickupId, function(success)
                 if success then
-                    TriggerClientEvent('ns-market:notification', source, 'success', 'Order picked up successfully')
-                    TriggerClientEvent('ns-market:refreshData', source)
+                    TriggerClientEvent('bs_market:notification', source, 'success', 'Order picked up successfully')
+                    TriggerClientEvent('bs_market:refreshData', source)
                 end
             end)
         else
-            TriggerClientEvent('ns-market:notification', source, 'error', 'Failed to add item to inventory')
+            TriggerClientEvent('bs_market:notification', source, 'error', 'Failed to add item to inventory')
         end
     else
-        TriggerClientEvent('ns-market:notification', source, 'error', 'Inventory system not available')
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Inventory system not available')
     end
 end)
 
 -- Event: Get player pickups
-RegisterNetEvent('ns-market:getPickups', function()
+RegisterNetEvent('bs_market:getPickups', function()
     local source = source
     local citizenid = GetPlayerCitizenid(source)
     if citizenid then
         GetPlayerPickups(citizenid, function(pickups)
-            TriggerClientEvent('ns-market:receivePickups', source, pickups)
+            TriggerClientEvent('bs_market:receivePickups', source, pickups)
         end)
     end
 end)
 
 -- Event: Get history
-RegisterNetEvent('ns-market:getHistory', function(filters)
+RegisterNetEvent('bs_market:getHistory', function(filters)
     local source = source
     GetHistory(filters, function(history)
-        TriggerClientEvent('ns-market:receiveHistory', source, history)
+        TriggerClientEvent('bs_market:receiveHistory', source, history)
     end)
 end)
 
 -- Event: Refresh data
-RegisterNetEvent('ns-market:requestRefresh', function()
+RegisterNetEvent('bs_market:requestRefresh', function()
     local source = source
     local citizenid = GetPlayerCitizenid(source)
     
@@ -1695,7 +1695,7 @@ RegisterNetEvent('ns-market:requestRefresh', function()
                         end
                     end
                 end
-                TriggerClientEvent('ns-market:refreshData', source, listings, buyOrders, playerPickups)
+                TriggerClientEvent('bs_market:refreshData', source, listings, buyOrders, playerPickups)
             end)
         end)
     end)

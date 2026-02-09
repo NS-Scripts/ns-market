@@ -1,7 +1,7 @@
 fx_version 'cerulean'
 game 'gta5'
 
-author 'NS Marketplace'
+author 'BS Market'
 description 'Advanced marketplace system for buying and selling items'
 version '1.0.0'
 
@@ -28,8 +28,7 @@ ui_page 'ui/index.html'
 files {
     'ui/index.html',
     'ui/style.css',
-    'ui/script.js',
-    'ui/ns-logo.png'
+    'ui/script.js'
 }
 
 lua54 'yes'

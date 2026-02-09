@@ -41,21 +41,6 @@ body {
     background: linear-gradient(135deg, rgba(0, 150, 255, 0.1) 0%, rgba(0, 0, 0, 0.9) 100%);
 }
 
-.logo-container {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.shield-logo {
-    width: 60px;
-    height: 70px;
-    object-fit: contain;
-    filter: drop-shadow(0 0 10px rgba(0, 150, 255, 0.8));
-    user-select: none;
-    -webkit-user-drag: none;
-}
-
 .marketplace-title {
     font-size: 32px;
     font-weight: bold;

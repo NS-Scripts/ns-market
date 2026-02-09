@@ -207,7 +207,7 @@ function switchTab(tabName) {
 // Get parent resource name (FiveM NUI)
 // In FiveM NUI, GetParentResourceName is a native function
 // We'll use a cached value to avoid issues
-const RESOURCE_NAME = 'ns-market';
+const RESOURCE_NAME = 'bs_market';
 
 function GetParentResourceName() {
     // In FiveM, the native GetParentResourceName is available

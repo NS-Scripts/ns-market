@@ -1,4 +1,4 @@
-# ns-market - FiveM Script
+# bs_market - FiveM Script
 
 A comprehensive marketplace system for FiveM servers that allows players to buy and sell items.
 
@@ -13,8 +13,8 @@ A comprehensive marketplace system for FiveM servers that allows players to buy 
 
 ## Dependencies
 
-1. qbox, (qbcore and esx not tested)
-2. ox_inventory, (qb-inventory and es_inventory not tested)
+1. qbox
+2. ox_inventory
 
 ## Usage
 
@@ -27,7 +27,7 @@ A comprehensive marketplace system for FiveM servers that allows players to buy 
 
 ## Installation
 
-1. Ensure ns-market or add to folders included in server.cfg e.g. '[standalone]'
+1. Ensure bs_market or add to folders included in server.cfg e.g. '[standalone]'
 2. Run the SQL script located in `sql/marketplace.sql` to create the tables:
 3. Logo can be swapped out with same name 60x70px
 4. Configure `Config.AvailableItems` in `config.lua` to control which items can be listed. If the list is empty, all items will be available.

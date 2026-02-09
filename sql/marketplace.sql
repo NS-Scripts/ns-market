@@ -1,7 +1,7 @@
--- NS Marketplace MySQL Schema
+-- BS Market MySQL Schema
 -- Run this SQL script to create the necessary tables
 
-CREATE TABLE IF NOT EXISTS `ns_marketplace_listings` (
+CREATE TABLE IF NOT EXISTS `bs_marketplace_listings` (
     `id` INT(11) NOT NULL AUTO_INCREMENT,
     `seller_citizenid` VARCHAR(50) NOT NULL,
     `seller_firstname` VARCHAR(100) NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS `ns_marketplace_listings` (
     KEY `created` (`created`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `ns_marketplace_buy_orders` (
+CREATE TABLE IF NOT EXISTS `bs_marketplace_buy_orders` (
     `id` INT(11) NOT NULL AUTO_INCREMENT,
     `buyer_citizenid` VARCHAR(50) NOT NULL,
     `buyer_firstname` VARCHAR(100) NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS `ns_marketplace_buy_orders` (
     KEY `created` (`created`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `ns_marketplace_history` (
+CREATE TABLE IF NOT EXISTS `bs_marketplace_history` (
     `id` INT(11) NOT NULL AUTO_INCREMENT,
     `type` VARCHAR(50) NOT NULL,
     `listing_id` INT(11) DEFAULT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS `ns_marketplace_history` (
     KEY `timestamp` (`timestamp`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `ns_marketplace_pickups` (
+CREATE TABLE IF NOT EXISTS `bs_marketplace_pickups` (
     `id` INT(11) NOT NULL AUTO_INCREMENT,
     `order_id` INT(11) NOT NULL,
     `buyer_citizenid` VARCHAR(50) NOT NULL,

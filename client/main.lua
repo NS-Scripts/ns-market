@@ -27,12 +27,12 @@ CreateThread(function()
         -- Add ox_target to PED
         exports.ox_target:addLocalEntity(ped, {
             {
-                name = 'ns-market:openMarket',
+                name = 'bs_market:openMarket',
                 icon = 'fa-solid fa-store',
                 label = 'Open Marketplace',
                 onSelect = function()
                     currentLocation = location
-                    TriggerServerEvent('ns-market:openMarket')
+                    TriggerServerEvent('bs_market:openMarket')
                 end
             }
         })
@@ -71,7 +71,7 @@ AddEventHandler('onResourceStop', function(resourceName)
 end)
 
 -- Open marketplace UI
-RegisterNetEvent('ns-market:openUI', function(listings, buyOrders, inventoryItems, allAvailableItems, availableItems, pickups)
+RegisterNetEvent('bs_market:openUI', function(listings, buyOrders, inventoryItems, allAvailableItems, availableItems, pickups)
     if isMarketOpen then return end
 
     isMarketOpen = true
@@ -89,7 +89,7 @@ RegisterNetEvent('ns-market:openUI', function(listings, buyOrders, inventoryItem
 end)
 
 -- Receive pickups
-RegisterNetEvent('ns-market:receivePickups', function(pickups)
+RegisterNetEvent('bs_market:receivePickups', function(pickups)
     SendNUIMessage({
         action = 'pickups',
         pickups = pickups
@@ -97,7 +97,7 @@ RegisterNetEvent('ns-market:receivePickups', function(pickups)
 end)
 
 -- Receive inventory items
-RegisterNetEvent('ns-market:receiveInventoryItems', function(inventoryItems)
+RegisterNetEvent('bs_market:receiveInventoryItems', function(inventoryItems)
     SendNUIMessage({
         action = 'inventoryItems',
         inventoryItems = inventoryItems
@@ -105,7 +105,7 @@ RegisterNetEvent('ns-market:receiveInventoryItems', function(inventoryItems)
 end)
 
 -- Receive pickups
-RegisterNetEvent('ns-market:receivePickups', function(pickups)
+RegisterNetEvent('bs_market:receivePickups', function(pickups)
     SendNUIMessage({
         action = 'pickups',
         pickups = pickups
@@ -113,7 +113,7 @@ RegisterNetEvent('ns-market:receivePickups', function(pickups)
 end)
 
 -- Refresh data
-RegisterNetEvent('ns-market:refreshData', function(listings, buyOrders, pickups)
+RegisterNetEvent('bs_market:refreshData', function(listings, buyOrders, pickups)
     SendNUIMessage({
         action = 'refresh',
         listings = listings,
@@ -123,7 +123,7 @@ RegisterNetEvent('ns-market:refreshData', function(listings, buyOrders, pickups)
 end)
 
 -- Close marketplace UI
-RegisterNetEvent('ns-market:closeUI', function()
+RegisterNetEvent('bs_market:closeUI', function()
     if not isMarketOpen then return end
     
     isMarketOpen = false
@@ -138,7 +138,7 @@ RegisterNetEvent('ns-market:closeUI', function()
 end)
 
 -- Refresh marketplace data
-RegisterNetEvent('ns-market:refreshData', function(listings, buyOrders, pickups)
+RegisterNetEvent('bs_market:refreshData', function(listings, buyOrders, pickups)
     if isMarketOpen then
         SendNUIMessage({
             action = 'refresh',
@@ -150,7 +150,7 @@ RegisterNetEvent('ns-market:refreshData', function(listings, buyOrders, pickups)
 end)
 
 -- Receive history
-RegisterNetEvent('ns-market:receiveHistory', function(history)
+RegisterNetEvent('bs_market:receiveHistory', function(history)
     SendNUIMessage({
         action = 'history',
         history = history
@@ -158,7 +158,7 @@ RegisterNetEvent('ns-market:receiveHistory', function(history)
 end)
 
 -- Notification
-RegisterNetEvent('ns-market:notification', function(type, message)
+RegisterNetEvent('bs_market:notification', function(type, message)
     SendNUIMessage({
         action = 'notification',
         type = type,
@@ -178,57 +178,57 @@ RegisterNUICallback('close', function(data, cb)
 end)
 
 RegisterNUICallback('listItem', function(data, cb)
-    TriggerServerEvent('ns-market:listItem', data.item, data.quantity, data.price, data.metadata)
+    TriggerServerEvent('bs_market:listItem', data.item, data.quantity, data.price, data.metadata)
     cb('ok')
 end)
 
 RegisterNUICallback('purchaseItem', function(data, cb)
-    TriggerServerEvent('ns-market:purchaseItem', data.listingId, data.quantity)
+    TriggerServerEvent('bs_market:purchaseItem', data.listingId, data.quantity)
     cb('ok')
 end)
 
 RegisterNUICallback('createBuyOrder', function(data, cb)
-    TriggerServerEvent('ns-market:createBuyOrder', data.item, data.quantity, data.price)
+    TriggerServerEvent('bs_market:createBuyOrder', data.item, data.quantity, data.price)
     cb('ok')
 end)
 
 RegisterNUICallback('cancelBuyOrder', function(data, cb)
-    TriggerServerEvent('ns-market:cancelBuyOrder', data.orderId)
+    TriggerServerEvent('bs_market:cancelBuyOrder', data.orderId)
     cb('ok')
 end)
 
 RegisterNUICallback('fulfillBuyOrder', function(data, cb)
-    TriggerServerEvent('ns-market:fulfillBuyOrder', data.orderId, data.quantity)
+    TriggerServerEvent('bs_market:fulfillBuyOrder', data.orderId, data.quantity)
     cb('ok')
 end)
 
 RegisterNUICallback('cancelListing', function(data, cb)
-    TriggerServerEvent('ns-market:cancelListing', data.listingId)
+    TriggerServerEvent('bs_market:cancelListing', data.listingId)
     cb('ok')
 end)
 
 RegisterNUICallback('getHistory', function(data, cb)
-    TriggerServerEvent('ns-market:getHistory', data.filters)
+    TriggerServerEvent('bs_market:getHistory', data.filters)
     cb('ok')
 end)
 
 RegisterNUICallback('requestRefresh', function(data, cb)
-    TriggerServerEvent('ns-market:requestRefresh')
+    TriggerServerEvent('bs_market:requestRefresh')
     cb('ok')
 end)
 
 RegisterNUICallback('getInventoryItems', function(data, cb)
-    TriggerServerEvent('ns-market:getInventoryItems')
+    TriggerServerEvent('bs_market:getInventoryItems')
     cb('ok')
 end)
 
 RegisterNUICallback('pickupOrder', function(data, cb)
-    TriggerServerEvent('ns-market:pickupOrder', data.pickupId)
+    TriggerServerEvent('bs_market:pickupOrder', data.pickupId)
     cb('ok')
 end)
 
 RegisterNUICallback('getPickups', function(data, cb)
-    TriggerServerEvent('ns-market:getPickups')
+    TriggerServerEvent('bs_market:getPickups')
     cb('ok')
 end)
 
