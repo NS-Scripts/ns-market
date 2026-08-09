@@ -1,9 +1,9 @@
 fx_version 'cerulean'
 game 'gta5'
 
-author 'BS Market'
-description 'Advanced marketplace system for buying and selling items'
-version '1.0.0'
+author 'Beetle Studios'
+description 'Advanced Item Marketplace (QBX, QB, ESX, ox_core + ox_inventory)'
+version '1.0.1'
 
 dependencies {
     'oxmysql',

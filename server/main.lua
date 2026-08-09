@@ -681,6 +681,421 @@ local function DoesItemExist(item)
     return false
 end
 
+-- Framework: Config.Framework — 'qbx', 'qb', 'esx', 'ox' (ox_core; alias 'ox_core')
+local FRAMEWORK = (Config and Config.Framework) or 'qbx'
+if FRAMEWORK == 'ox_core' then
+    FRAMEWORK = 'ox'
+end
+if FRAMEWORK ~= 'qb' and FRAMEWORK ~= 'esx' and FRAMEWORK ~= 'ox' then
+    FRAMEWORK = 'qbx'
+end
+
+local ESX
+
+local function EnsureESX()
+    if ESX then
+        return ESX
+    end
+    if FRAMEWORK ~= 'esx' or GetResourceState('es_extended') ~= 'started' then
+        return nil
+    end
+    pcall(function()
+        ESX = exports['es_extended']:getSharedObject()
+    end)
+    return ESX
+end
+
+local oxCore = (FRAMEWORK == 'ox') and exports.ox_core or nil
+
+local QBCore
+
+local function QbGetCore()
+    if QBCore then
+        return QBCore
+    end
+    if GetResourceState('qb-core') ~= 'started' then
+        return nil
+    end
+    local ok, core = pcall(function()
+        return exports['qb-core']:GetCoreObject()
+    end)
+    if ok and core then
+        QBCore = core
+    end
+    return QBCore
+end
+
+local function FrameworkGetWalletPlayer(source)
+    if not source then
+        return nil
+    end
+    if FRAMEWORK == 'qb' then
+        local core = QbGetCore()
+        if not core or not core.Functions then
+            return nil
+        end
+        return core.Functions.GetPlayer(source)
+    end
+    if FRAMEWORK == 'qbx' then
+        if GetResourceState('qbx_core') ~= 'started' then
+            return nil
+        end
+        local ok, player = pcall(function()
+            return exports.qbx_core:GetPlayer(source)
+        end)
+        return (ok and player) and player or nil
+    end
+    return nil
+end
+
+local function OxGetCharId(source)
+    if not oxCore then
+        return nil
+    end
+    local ok, data = pcall(function()
+        return oxCore:GetPlayer(source)
+    end)
+    if not ok or not data then
+        return nil
+    end
+    return data.charId
+end
+
+local function OxGetAccountId(source)
+    local charId = OxGetCharId(source)
+    if not charId then
+        return nil
+    end
+    local ok, acc = pcall(function()
+        return oxCore:GetCharacterAccount(charId)
+    end)
+    if not ok or not acc then
+        return nil
+    end
+    return acc.accountId
+end
+
+local function FrameworkGetCharacterId(source)
+    if FRAMEWORK == 'esx' then
+        local ex = EnsureESX()
+        if not ex then
+            return nil
+        end
+        local xPlayer = ex.GetPlayerFromId(source)
+        return xPlayer and xPlayer.identifier or nil
+    end
+    if FRAMEWORK == 'ox' then
+        local cid = OxGetCharId(source)
+        return cid and tostring(cid) or nil
+    end
+    local player = FrameworkGetWalletPlayer(source)
+    return player and player.PlayerData and player.PlayerData.citizenid or nil
+end
+
+local function FrameworkGetBankBalance(source)
+    if FRAMEWORK == 'ox' then
+        local accountId = OxGetAccountId(source)
+        if not accountId then
+            return 0
+        end
+        local ok, balance = pcall(function()
+            return oxCore:CallAccount(accountId, 'get', 'balance')
+        end)
+        return (ok and balance) and (tonumber(balance) or 0) or 0
+    end
+    if FRAMEWORK == 'esx' then
+        local ex = EnsureESX()
+        if not ex then
+            return 0
+        end
+        local xPlayer = ex.GetPlayerFromId(source)
+        if not xPlayer then
+            return 0
+        end
+        local acc = xPlayer.getAccount('bank')
+        return (acc and acc.money) and acc.money or 0
+    end
+    local player = FrameworkGetWalletPlayer(source)
+    if not player or not player.Functions or not player.Functions.GetMoney then
+        return 0
+    end
+    return player.Functions.GetMoney('bank') or 0
+end
+
+local function FrameworkGetCashMoney(source)
+    if FRAMEWORK == 'ox' then
+        return 0
+    end
+    if FRAMEWORK == 'esx' then
+        local ex = EnsureESX()
+        if not ex then
+            return 0
+        end
+        local xPlayer = ex.GetPlayerFromId(source)
+        if not xPlayer then
+            return 0
+        end
+        local acc = xPlayer.getAccount('money')
+        return (acc and acc.money) and acc.money or 0
+    end
+    local player = FrameworkGetWalletPlayer(source)
+    if not player or not player.Functions or not player.Functions.GetMoney then
+        return 0
+    end
+    return player.Functions.GetMoney('cash') or 0
+end
+
+local function FrameworkGetTotalSpendable(source)
+    return FrameworkGetCashMoney(source) + FrameworkGetBankBalance(source)
+end
+
+local function FrameworkRemoveMoneyCombined(source, amount)
+    if not amount or amount <= 0 then
+        return true
+    end
+    if FRAMEWORK == 'ox' then
+        local accountId = OxGetAccountId(source)
+        if not accountId then
+            return false
+        end
+        local ok, res = pcall(function()
+            return oxCore:CallAccount(accountId, 'removeBalance', {
+                amount = amount,
+                message = 'bs_market',
+            })
+        end)
+        return ok and res and res.success == true
+    end
+    if FRAMEWORK == 'esx' then
+        local ex = EnsureESX()
+        if not ex then
+            return false
+        end
+        local xPlayer = ex.GetPlayerFromId(source)
+        if not xPlayer then
+            return false
+        end
+        local cashAcc = xPlayer.getAccount('money')
+        local cash = (cashAcc and cashAcc.money) or 0
+        if cash >= amount then
+            xPlayer.removeAccountMoney('money', amount, 'bs_market')
+            return true
+        end
+        xPlayer.removeAccountMoney('bank', amount, 'bs_market')
+        return true
+    end
+    local player = FrameworkGetWalletPlayer(source)
+    if not player or not player.Functions or not player.Functions.RemoveMoney or not player.Functions.GetMoney then
+        return false
+    end
+    local cash = player.Functions.GetMoney('cash') or 0
+    if cash >= amount then
+        player.Functions.RemoveMoney('cash', amount, 'bs_market')
+        return true
+    end
+    player.Functions.RemoveMoney('bank', amount, 'bs_market')
+    return true
+end
+
+local function FrameworkAddMoneyBank(source, amount)
+    if not amount or amount <= 0 then
+        return true
+    end
+    if FRAMEWORK == 'ox' then
+        local accountId = OxGetAccountId(source)
+        if not accountId then
+            return false
+        end
+        local ok, res = pcall(function()
+            return oxCore:CallAccount(accountId, 'addBalance', {
+                amount = amount,
+                message = 'bs_market',
+            })
+        end)
+        return ok and res and res.success == true
+    end
+    if FRAMEWORK == 'esx' then
+        local ex = EnsureESX()
+        if not ex then
+            return false
+        end
+        local xPlayer = ex.GetPlayerFromId(source)
+        if not xPlayer then
+            return false
+        end
+        xPlayer.addAccountMoney('bank', amount, 'bs_market')
+        return true
+    end
+    local player = FrameworkGetWalletPlayer(source)
+    if not player or not player.Functions or not player.Functions.AddMoney then
+        return false
+    end
+    player.Functions.AddMoney('bank', amount, 'bs_market')
+    return true
+end
+
+local function GetPlayerCitizenid(source)
+    return FrameworkGetCharacterId(source)
+end
+
+local function GetPlayerFirstname(source)
+    if FRAMEWORK == 'esx' then
+        local ex = EnsureESX()
+        if not ex then
+            return ''
+        end
+        local xPlayer = ex.GetPlayerFromId(source)
+        if not xPlayer then
+            return ''
+        end
+        local first = xPlayer.get and (xPlayer.get('firstName') or xPlayer.get('firstname')) or ''
+        if first == '' and xPlayer.getName then
+            local full = xPlayer.getName() or ''
+            local space = string.find(full, ' ')
+            if space then
+                first = string.sub(full, 1, space - 1)
+            end
+        end
+        return first or ''
+    end
+    if FRAMEWORK == 'ox' then
+        if not oxCore then
+            return ''
+        end
+        local ok, first = pcall(function()
+            return oxCore:CallPlayer(source, 'get', 'firstName')
+        end)
+        return (ok and first) and tostring(first) or ''
+    end
+    local player = FrameworkGetWalletPlayer(source)
+    if player and player.PlayerData and player.PlayerData.charinfo then
+        return player.PlayerData.charinfo.firstname or ''
+    end
+    return ''
+end
+
+local function GetPlayerLastname(source)
+    if FRAMEWORK == 'esx' then
+        local ex = EnsureESX()
+        if not ex then
+            return ''
+        end
+        local xPlayer = ex.GetPlayerFromId(source)
+        if not xPlayer then
+            return ''
+        end
+        local last = xPlayer.get and (xPlayer.get('lastName') or xPlayer.get('lastname')) or ''
+        if last == '' and xPlayer.getName then
+            local full = xPlayer.getName() or ''
+            local space = string.find(full, ' ')
+            if space then
+                last = string.sub(full, space + 1)
+            end
+        end
+        return last or ''
+    end
+    if FRAMEWORK == 'ox' then
+        if not oxCore then
+            return ''
+        end
+        local ok, last = pcall(function()
+            return oxCore:CallPlayer(source, 'get', 'lastName')
+        end)
+        return (ok and last) and tostring(last) or ''
+    end
+    local player = FrameworkGetWalletPlayer(source)
+    if player and player.PlayerData and player.PlayerData.charinfo then
+        return player.PlayerData.charinfo.lastname or ''
+    end
+    return ''
+end
+
+local function GetPlayerNameById(source)
+    local f, l = GetPlayerFirstname(source), GetPlayerLastname(source)
+    if f ~= '' or l ~= '' then
+        return (f .. ' ' .. l):gsub('^%s+', ''):gsub('%s+$', '')
+    end
+    return GetPlayerName(source) or 'Unknown'
+end
+
+local function GetPlayerSourceFromCitizenid(citizenid)
+    if not citizenid then
+        return nil
+    end
+    if FRAMEWORK == 'qbx' and GetResourceState('qbx_core') == 'started' then
+        local ok, Player = pcall(function()
+            return exports.qbx_core:GetPlayerByCitizenId(citizenid)
+        end)
+        if ok and Player and Player.PlayerData and Player.PlayerData.source then
+            return Player.PlayerData.source
+        end
+    elseif FRAMEWORK == 'qb' then
+        local core = QbGetCore()
+        if core and core.Functions and core.Functions.GetPlayerByCitizenId then
+            local ok, p = pcall(function()
+                return core.Functions.GetPlayerByCitizenId(citizenid)
+            end)
+            if ok and p and p.PlayerData and p.PlayerData.source then
+                return p.PlayerData.source
+            end
+        end
+    elseif FRAMEWORK == 'esx' then
+        local ex = EnsureESX()
+        if ex then
+            for _, id in ipairs(GetPlayers()) do
+                local sid = tonumber(id)
+                if sid then
+                    local xP = ex.GetPlayerFromId(sid)
+                    if xP and xP.identifier == citizenid then
+                        return sid
+                    end
+                end
+            end
+        end
+    elseif FRAMEWORK == 'ox' and oxCore then
+        local needle = tostring(citizenid)
+        for _, id in ipairs(GetPlayers()) do
+            local sid = tonumber(id)
+            if sid then
+                local ok, data = pcall(function()
+                    return oxCore:GetPlayer(sid)
+                end)
+                if ok and data and tostring(data.charId) == needle then
+                    return sid
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function GetPlayerMoney(source)
+    if GetResourceState('ox_inventory') == 'started' then
+        return exports.ox_inventory:GetItemCount(source, 'money') or 0
+    elseif GetResourceState('qb-inventory') == 'started' then
+        return exports['qb-inventory']:GetMoney(source) or 0
+    end
+    return FrameworkGetTotalSpendable(source)
+end
+
+local function AddMoneyToPlayer(source, amount)
+    if GetResourceState('ox_inventory') == 'started' then
+        return exports.ox_inventory:AddItem(source, 'money', amount)
+    elseif GetResourceState('qb-inventory') == 'started' then
+        return exports['qb-inventory']:AddMoney(source, amount)
+    end
+    return FrameworkAddMoneyBank(source, amount)
+end
+
+local function RemoveMoneyFromPlayer(source, amount)
+    if GetResourceState('ox_inventory') == 'started' then
+        return exports.ox_inventory:RemoveItem(source, 'money', amount)
+    elseif GetResourceState('qb-inventory') == 'started' then
+        return exports['qb-inventory']:RemoveMoney(source, amount)
+    end
+    return FrameworkRemoveMoneyCombined(source, amount)
+end
+
 -- Get player inventory (adjust based on your inventory system)
 local function GetPlayerInventory(source)
     -- This is a placeholder - adjust based on your inventory system
@@ -725,114 +1140,6 @@ local function RemoveItemFromPlayer(source, item, quantity, metadata)
         TriggerClientEvent('bs_market:removeItem', source, item, quantity, metadata)
         return true
     end
-end
-
--- Get player money (adjust based on your framework)
-local function GetPlayerMoney(source)
-    if GetResourceState('ox_inventory') == 'started' then
-        return exports.ox_inventory:GetItemCount(source, 'money') or 0
-    elseif GetResourceState('qb-inventory') == 'started' then
-        return exports['qb-inventory']:GetMoney(source) or 0
-    elseif GetResourceState('es_extended') == 'started' then
-        local xPlayer = ESX.GetPlayerFromId(source)
-        return xPlayer.getMoney() or 0
-    else
-        -- Fallback: trigger event for your money system
-        return 0
-    end
-end
-
--- Add money to player
-local function AddMoneyToPlayer(source, amount)
-    if GetResourceState('ox_inventory') == 'started' then
-        return exports.ox_inventory:AddItem(source, 'money', amount)
-    elseif GetResourceState('qb-inventory') == 'started' then
-        return exports['qb-inventory']:AddMoney(source, amount)
-    elseif GetResourceState('es_extended') == 'started' then
-        local xPlayer = ESX.GetPlayerFromId(source)
-        xPlayer.addMoney(amount)
-        return true
-    else
-        -- Fallback: trigger event for your money system
-        TriggerClientEvent('bs_market:addMoney', source, amount)
-        return true
-    end
-end
-
--- Remove money from player
-local function RemoveMoneyFromPlayer(source, amount)
-    if GetResourceState('ox_inventory') == 'started' then
-        return exports.ox_inventory:RemoveItem(source, 'money', amount)
-    elseif GetResourceState('qb-inventory') == 'started' then
-        return exports['qb-inventory']:RemoveMoney(source, amount)
-    elseif GetResourceState('es_extended') == 'started' then
-        local xPlayer = ESX.GetPlayerFromId(source)
-        xPlayer.removeMoney(amount)
-        return true
-    else
-        -- Fallback: trigger event for your money system
-        TriggerClientEvent('bs_market:removeMoney', source, amount)
-        return true
-    end
-end
-
--- Get player citizenid from Qbox
-local function GetPlayerCitizenid(source)
-    if GetResourceState('qbx_core') == 'started' then
-        local Player = exports.qbx_core:GetPlayer(source)
-        if Player and Player.PlayerData then
-            return Player.PlayerData.citizenid
-        end
-    end
-    return nil
-end
-
--- Get player name (firstname + lastname) from Qbox
-local function GetPlayerNameById(source)
-    if GetResourceState('qbx_core') == 'started' then
-        local Player = exports.qbx_core:GetPlayer(source)
-        if Player and Player.PlayerData and Player.PlayerData.charinfo then
-            local charinfo = Player.PlayerData.charinfo
-            if charinfo.firstname and charinfo.lastname then
-                return charinfo.firstname .. ' ' .. charinfo.lastname
-            end
-        end
-    end
-    -- Fallback to server name
-    return GetPlayerName(source) or "Unknown"
-end
-
--- Get player firstname from Qbox
-local function GetPlayerFirstname(source)
-    if GetResourceState('qbx_core') == 'started' then
-        local Player = exports.qbx_core:GetPlayer(source)
-        if Player and Player.PlayerData and Player.PlayerData.charinfo then
-            return Player.PlayerData.charinfo.firstname or ''
-        end
-    end
-    return ''
-end
-
--- Get player lastname from Qbox
-local function GetPlayerLastname(source)
-    if GetResourceState('qbx_core') == 'started' then
-        local Player = exports.qbx_core:GetPlayer(source)
-        if Player and Player.PlayerData and Player.PlayerData.charinfo then
-            return Player.PlayerData.charinfo.lastname or ''
-        end
-    end
-    return ''
-end
-
--- Get player source from citizenid (for notifications)
-local function GetPlayerSourceFromCitizenid(citizenid)
-    if GetResourceState('qbx_core') == 'started' then
-        local Player = exports.qbx_core:GetPlayerByCitizenId(citizenid)
-        if Player then
-            return Player.PlayerData.source
-        end
-    end
-    return nil
 end
 
 -- Get all available items from ox_inventory (for label-to-name mapping)
@@ -923,22 +1230,27 @@ end)
 -- Event: List item for sale
 RegisterNetEvent('bs_market:listItem', function(item, quantity, price, metadata)
     local source = source
+
+    quantity = tonumber(quantity)
+    price = tonumber(price)
     
     -- Validation
     if not IsItemAvailable(item) then
         TriggerClientEvent('bs_market:notification', source, 'error', 'This item cannot be listed on the marketplace')
         return
     end
-    
-    if price < Config.Settings.minPrice or price > Config.Settings.maxPrice then
+
+    if not price or price < Config.Settings.minPrice or price > Config.Settings.maxPrice then
         TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid price range')
         return
     end
+    price = math.floor(price)
     
-    if quantity < 1 then
+    if not quantity or quantity < 1 then
         TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid quantity')
         return
     end
+    quantity = math.floor(quantity)
     
     -- Get player citizenid
     local citizenid = GetPlayerCitizenid(source)
@@ -1049,6 +1361,13 @@ RegisterNetEvent('bs_market:purchaseItem', function(listingId, quantity)
         TriggerClientEvent('bs_market:notification', source, 'error', 'Listing not found')
         return
     end
+
+    quantity = tonumber(quantity)
+    if not quantity or quantity < 1 then
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid quantity')
+        return
+    end
+    quantity = math.floor(quantity)
     
     -- Get buyer citizenid
     local buyerCitizenid = GetPlayerCitizenid(source)
@@ -1253,6 +1572,9 @@ end)
 -- Event: Create buy order
 RegisterNetEvent('bs_market:createBuyOrder', function(item, quantity, price)
     local source = source
+
+    quantity = tonumber(quantity)
+    price = tonumber(price)
     
     -- Validation
     if not item or item == '' then
@@ -1271,15 +1593,17 @@ RegisterNetEvent('bs_market:createBuyOrder', function(item, quantity, price)
         return
     end
     
-    if price < Config.Settings.minPrice or price > Config.Settings.maxPrice then
+    if not price or price < Config.Settings.minPrice or price > Config.Settings.maxPrice then
         TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid price range')
         return
     end
+    price = math.floor(price)
     
-    if quantity < 1 then
+    if not quantity or quantity < 1 then
         TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid quantity')
         return
     end
+    quantity = math.floor(quantity)
     
     -- Get player citizenid
     local citizenid = GetPlayerCitizenid(source)
@@ -1415,6 +1739,13 @@ RegisterNetEvent('bs_market:fulfillBuyOrder', function(orderId, quantity)
         TriggerClientEvent('bs_market:notification', source, 'error', 'Buy order not found')
         return
     end
+
+    quantity = tonumber(quantity)
+    if not quantity or quantity < 1 then
+        TriggerClientEvent('bs_market:notification', source, 'error', 'Invalid quantity')
+        return
+    end
+    quantity = math.floor(quantity)
     
     -- Get seller citizenid
     local sellerCitizenid = GetPlayerCitizenid(source)
@@ -1708,5 +2039,15 @@ CreateThread(function()
     end)
     LoadBuyOrders(function()
     end)
+    local res = ({
+        qbx = 'qbx_core',
+        qb = 'qb-core',
+        esx = 'es_extended',
+        ox = 'ox_core',
+    })[FRAMEWORK]
+    if res and GetResourceState(res) ~= 'started' then
+        print(('^3[bs_market] ^7Config.Framework is %s but ^1%s^7 is not started — player IDs may fail.'):format(FRAMEWORK, res))
+    end
+    print(('^2[bs_market] ^7Loaded (framework: %s)'):format(FRAMEWORK))
 end)
 
